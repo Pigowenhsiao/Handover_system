@@ -1,9 +1,9 @@
-# Specification Quality Checklist: Multi-language Support Feature
-## Feature: E:\python_Code\handover_system\specs\01_multi-language-support\spec.md
+# Specification Quality Checklist: User Editor Feature
+## Feature: E:\python_Code\handover_system\specs\01_user-editor\spec.md
 
 **Purpose**: Validate specification completeness and quality before proceeding to planning
 **Created**: 2025-11-25
-**Feature**: Multi-language support for electronic handover system
+**Feature**: User management functionality for electronic handover system
 
 ## Content Quality
 

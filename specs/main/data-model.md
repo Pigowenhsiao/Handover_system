@@ -4,10 +4,10 @@
 ### 欄位定義
 - **id** (INTEGER, PRIMARY KEY, AUTO_INCREMENT): 唯一標識符
 - **username** (VARCHAR(80), UNIQUE, NOT NULL): 使用者名稱
-- **password_hash** (VARCHAR(255), NOT NULL): 密碼哈希值
+- **password_hash** (VARCHAR(255), NOT NULL): 密碼哈希值 (使用 bcrypt)
 - **role** (VARCHAR(20), DEFAULT 'user'): 角色 ('admin', 'user')
 - **created_at** (DATETIME, DEFAULT CURRENT_TIMESTAMP): 創建時間
-- **updated_at** (DATETIME, DEFAULT CURRENT_TIMESTAMP ON UPDATE): 更新時間
+- **updated_at** (DATETIME, DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP): 更新時間
 
 ### 關係
 - 一對多關係: User → DailyReport (author_id)
@@ -20,7 +20,7 @@
 - **area** (VARCHAR(20), NOT NULL): 區域 ('etching_D', 'etching_E', 'litho', 'thin_film')
 - **author_id** (INTEGER, FOREIGN KEY → User.id, NOT NULL): 填寫者 ID
 - **created_at** (DATETIME, DEFAULT CURRENT_TIMESTAMP): 創建時間
-- **updated_at** (DATETIME, DEFAULT CURRENT_TIMESTAMP ON UPDATE): 更新時間
+- **updated_at** (DATETIME, DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP): 更新時間
 - **summary_key_output** (TEXT): Key Machine Output 摘要
 - **summary_issues** (TEXT): Key Issues 摘要
 - **summary_countermeasures** (TEXT): Countermeasures 摘要
@@ -81,7 +81,7 @@
 - **resource_value** (TEXT, NOT NULL): 資源值
 - **namespace** (VARCHAR(100), DEFAULT 'common'): 命名空間
 - **created_at** (DATETIME, DEFAULT CURRENT_TIMESTAMP): 創建時間
-- **updated_at** (DATETIME, DEFAULT CURRENT_TIMESTAMP ON UPDATE): 更新時間
+- **updated_at** (DATETIME, DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP): 更新時間
 - **updated_by** (INTEGER, FOREIGN KEY → User.id): 最後更新用戶
 
 ### 關係
@@ -95,7 +95,7 @@
 - **is_default** (BOOLEAN, DEFAULT FALSE): 是否為默認語言
 - **is_active** (BOOLEAN, DEFAULT TRUE): 是否啟用
 - **created_at** (DATETIME, DEFAULT CURRENT_TIMESTAMP): 創建時間
-- **updated_at** (DATETIME, DEFAULT CURRENT_TIMESTAMP ON UPDATE): 更新時間
+- **updated_at** (DATETIME, DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP): 更新時間
 
 ### 關係
 - 多對一關係: LanguageSetting → User (user_id)
@@ -116,7 +116,7 @@
 - DailyReport.area: 僅限於 'etching_D', 'etching_E', 'litho', 'thin_film'
 - AttendanceEntry.category: 僅限於 'Regular' 或 'Contract'
 - AttendanceEntry.scheduled_count, present_count, absent_count: 必須為非負整數
-- AttendanceEntry.absent_count: 必須 <= scheduled_count
+- AttendanceEntry.present_count + AttendanceEntry.absent_count <= AttendanceEntry.scheduled_count
 - User.username: 長度 3-80 字元，具唯一性
 - User.role: 僅限於 'admin' 或 'user'
 - LanguageResource.language_code: 僅限於 'zh', 'ja', 'en'

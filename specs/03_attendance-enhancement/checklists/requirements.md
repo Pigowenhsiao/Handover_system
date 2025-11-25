@@ -1,9 +1,9 @@
-# Specification Quality Checklist: Multi-language Support Feature
-## Feature: E:\python_Code\handover_system\specs\01_multi-language-support\spec.md
+# Specification Quality Checklist: Attendance Record Enhancement Feature
+## Feature: E:\python_Code\handover_system\specs\03_attendance-enhancement\spec.md
 
 **Purpose**: Validate specification completeness and quality before proceeding to planning
 **Created**: 2025-11-25
-**Feature**: Multi-language support for electronic handover system
+**Feature**: Simultaneous regular and contractor attendance recording
 
 ## Content Quality
 
