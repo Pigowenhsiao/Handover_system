@@ -86,16 +86,12 @@ backend/
 │   ├── base.py               # Database connection and session management
 │   ├── init_db.py            # Database initialization
 │   └── models/               # Data models (user, daily_report, attendance, equipment, lot)
+├── auth/
+│   ├── auth.py               # Authentication utilities and middleware
+│   └── password_manager.py   # Password hashing and verification
 ├── api/
-│   ├── deps.py               # Dependency injection functions
-│   ├── auth.py               # Authentication endpoints
-│   └── routes/               # API route definitions
-│       ├── reports.py        # Daily report endpoints
-│       ├── attendance.py     # Attendance record endpoints
-│       ├── equipment.py      # Equipment log endpoints
-│       ├── lots.py           # Lot log endpoints
-│       └── users.py          # User management endpoints
-├── schemas/                  # Pydantic models for API validation
+│   └── routes/               # API route definitions (if needed for any services)
+├── schemas/                  # Pydantic models for validation
 │   ├── auth.py
 │   ├── reports.py
 │   ├── attendance.py
@@ -110,46 +106,34 @@ backend/
 │   └── lot_service.py
 ├── utils/                    # Utility functions
 │   ├── auth.py               # Authentication utilities
-│   ├── email.py              # Email sending utilities
-│   ├── encryption.py         # Data encryption utilities
 │   ├── validators.py         # Data validation utilities
+│   ├── localization.py       # Multi-language support utilities
 │   └── helpers.py            # General helper functions
 ├── config/                   # Configuration settings
 │   └── settings.py
-└── static/                   # Static assets (to be served by FastAPI)
+└── static/                   # Static assets
     └── uploads/             # File upload directory
 
 frontend/
-├── public/
-│   ├── index.html            # Main HTML entry point
-│   └── locales/              # Translation files (zh.json, ja.json, en.json)
-└── src/
-    ├── components/           # Reusable UI components
-    │   ├── Login.jsx
-    │   ├── LanguageSelector.jsx
-    │   ├── DailyReportForm.jsx
-    │   ├── AttendanceSection.jsx
-    │   ├── EquipmentLogSection.jsx
-    │   └── LotLogSection.jsx
-    ├── pages/                # Page components
-    │   ├── Home.jsx
-    │   ├── Reports.jsx
-    │   ├── Settings.jsx
-    │   └── Admin.jsx
-    ├── hooks/                # Custom React hooks
-    │   └── useLanguage.jsx
-    ├── contexts/             # React context providers
-    │   └── AuthContext.jsx
-    ├── services/             # Service API calls
-    │   └── api.js
-    ├── i18n/                 # Internationalization setup
-    │   └── i18n.js
-    ├── utils/                # Utility functions
-    │   ├── auth.js
-    │   └── validators.js
-    ├── styles/               # CSS styles
-    │   └── globals.css
-    └── App.jsx               # Main application component
+├── main.py                  # GUI application entry point
+├── components/
+│   ├── login_window.py      # Login interface
+│   ├── main_window.py       # Main application window
+│   ├── language_selector.py # Language selection component
+│   ├── daily_report_form.py # Daily report input form
+│   ├── attendance_section.py # Attendance input section
+│   ├── equipment_log_section.py # Equipment log input section
+│   ├── lot_log_section.py   # Lot log input section
+│   └── user_management.py   # User management interface
+├── i18n/
+│   ├── language_manager.py  # Multi-language management system
+│   ├── translations/        # Translation files (zh.json, ja.json, en.json)
+│   └── localization.py      # Localization utilities
+├── utils/
+│   ├── validators.py        # Input validation utilities
+│   └── helpers.py           # Helper functions
+└── styles/                  # GUI styling (if using ttk themes)
+    └── themes.py           # Theme configurations
 
 uploads/                      # Directory for uploaded images
     └── equipment_images/    # Specific subdirectory for equipment images
@@ -157,7 +141,7 @@ uploads/                      # Directory for uploaded images
 docs/                        # Documentation files
     ├── user_manual.md       # User manual
     ├── admin_guide.md       # Administrator guide
-    └── api_documentation.md # API documentation
+    └── api_documentation.md # API documentation (if applicable)
 
 tests/                       # Test files
 ├── unit/                    # Unit tests
@@ -165,17 +149,16 @@ tests/                       # Test files
 │   ├── services/            # Service tests
 │   └── utils/               # Utility function tests
 ├── integration/             # Integration tests
-│   ├── api/                 # API integration tests
-│   └── auth/                # Authentication integration tests
+│   ├── auth/                # Authentication integration tests
+│   └── reports/             # Report functionality integration tests
 └── e2e/                     # End-to-end tests (if applicable)
 
 requirements.txt             # Python dependencies
-package.json                 # Node.js dependencies (if using frontend build tools)
 Dockerfile                   # Containerization (if applicable)
 README.md                    # Project documentation
 ```
 
-**Structure Decision**: Selected single-project structure with separate backend and frontend directories to maintain separation of concerns while keeping the project manageable as a standalone desktop application. The desktop application will primarily utilize the backend with a thin GUI layer implemented via tkinter for the user interface.
+**Structure Decision**: Selected single-project structure with distinct backend and frontend directories to maintain separation of concerns while keeping the project manageable as a standalone desktop application. The desktop application will use tkinter for the user interface, providing a native cross-platform experience with a clear separation between business logic (backend) and presentation (frontend with tkinter).
 
 ### Source Code (repository root)
 
@@ -188,16 +171,12 @@ backend/
 │   ├── base.py               # Database connection and session management
 │   ├── init_db.py            # Database initialization
 │   └── models/               # Data models (user, daily_report, attendance, equipment, lot)
+├── auth/
+│   ├── auth.py               # Authentication utilities and middleware
+│   └── password_manager.py   # Password hashing and verification
 ├── api/
-│   ├── deps.py               # Dependency injection functions
-│   ├── auth.py               # Authentication endpoints
-│   └── routes/               # API route definitions
-│       ├── reports.py        # Daily report endpoints
-│       ├── attendance.py     # Attendance record endpoints
-│       ├── equipment.py      # Equipment log endpoints
-│       ├── lots.py           # Lot log endpoints
-│       └── users.py          # User management endpoints
-├── schemas/                  # Pydantic models for API validation
+│   └── routes/               # API route definitions (if needed for any services)
+├── schemas/                  # Pydantic models for validation
 │   ├── auth.py
 │   ├── reports.py
 │   ├── attendance.py
@@ -212,46 +191,34 @@ backend/
 │   └── lot_service.py
 ├── utils/                    # Utility functions
 │   ├── auth.py               # Authentication utilities
-│   ├── email.py              # Email sending utilities
-│   ├── encryption.py         # Data encryption utilities
 │   ├── validators.py         # Data validation utilities
+│   ├── localization.py       # Multi-language support utilities
 │   └── helpers.py            # General helper functions
 ├── config/                   # Configuration settings
 │   └── settings.py
-└── static/                   # Static assets (to be served by FastAPI)
+└── static/                   # Static assets
     └── uploads/             # File upload directory
 
 frontend/
-├── public/
-│   ├── index.html            # Main HTML entry point
-│   └── locales/              # Translation files (zh.json, ja.json, en.json)
-└── src/
-    ├── components/           # Reusable UI components
-    │   ├── Login.jsx
-    │   ├── LanguageSelector.jsx
-    │   ├── DailyReportForm.jsx
-    │   ├── AttendanceSection.jsx
-    │   ├── EquipmentLogSection.jsx
-    │   └── LotLogSection.jsx
-    ├── pages/                # Page components
-    │   ├── Home.jsx
-    │   ├── Reports.jsx
-    │   ├── Settings.jsx
-    │   └── Admin.jsx
-    ├── hooks/                # Custom React hooks
-    │   └── useLanguage.jsx
-    ├── contexts/             # React context providers
-    │   └── AuthContext.jsx
-    ├── services/             # Service API calls
-    │   └── api.js
-    ├── i18n/                 # Internationalization setup
-    │   └── i18n.js
-    ├── utils/                # Utility functions
-    │   ├── auth.js
-    │   └── validators.js
-    ├── styles/               # CSS styles
-    │   └── globals.css
-    └── App.jsx               # Main application component
+├── main.py                  # GUI application entry point
+├── components/
+│   ├── login_window.py      # Login interface
+│   ├── main_window.py       # Main application window
+│   ├── language_selector.py # Language selection component
+│   ├── daily_report_form.py # Daily report input form
+│   ├── attendance_section.py # Attendance input section
+│   ├── equipment_log_section.py # Equipment log input section
+│   ├── lot_log_section.py   # Lot log input section
+│   └── user_management.py   # User management interface
+├── i18n/
+│   ├── language_manager.py  # Multi-language management system
+│   ├── translations/        # Translation files (zh.json, ja.json, en.json)
+│   └── localization.py      # Localization utilities
+├── utils/
+│   ├── validators.py        # Input validation utilities
+│   └── helpers.py           # Helper functions
+└── styles/                  # GUI styling (if using ttk themes)
+    └── themes.py           # Theme configurations
 
 uploads/                      # Directory for uploaded images
     └── equipment_images/    # Specific subdirectory for equipment images
@@ -259,7 +226,7 @@ uploads/                      # Directory for uploaded images
 docs/                        # Documentation files
     ├── user_manual.md       # User manual
     ├── admin_guide.md       # Administrator guide
-    └── api_documentation.md # API documentation
+    └── api_documentation.md # API documentation (if applicable)
 
 tests/                       # Test files
 ├── unit/                    # Unit tests
@@ -267,17 +234,16 @@ tests/                       # Test files
 │   ├── services/            # Service tests
 │   └── utils/               # Utility function tests
 ├── integration/             # Integration tests
-│   ├── api/                 # API integration tests
-│   └── auth/                # Authentication integration tests
+│   ├── auth/                # Authentication integration tests
+│   └── reports/             # Report functionality integration tests
 └── e2e/                     # End-to-end tests (if applicable)
 
 requirements.txt             # Python dependencies
-package.json                 # Node.js dependencies (if using frontend build tools)
 Dockerfile                   # Containerization (if applicable)
 README.md                    # Project documentation
 ```
 
-**Structure Decision**: Selected single-project structure with separate backend and frontend directories to maintain separation of concerns while keeping the project manageable as a standalone desktop application. The desktop application will primarily utilize the backend with a thin GUI layer implemented via tkinter for the user interface.
+**Structure Decision**: Selected single-project structure with distinct backend and frontend directories to maintain separation of concerns while keeping the project manageable as a standalone desktop application. The desktop application will use tkinter for the user interface, providing a native cross-platform experience with a clear separation between business logic (backend) and presentation (frontend with tkinter).
 
 ## Complexity Tracking
 
