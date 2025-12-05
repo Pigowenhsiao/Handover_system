@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-import os
 from datetime import datetime, date
-from typing import Generator, Optional
+from typing import Generator
 
-import streamlit as st
 from sqlalchemy import Column, Integer, String, Date, DateTime, Text, ForeignKey, create_engine
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker, Session
 
@@ -104,7 +102,7 @@ def init_db(default_admin_username: str = "admin", default_admin_password: str =
     try:
         Base.metadata.create_all(bind=engine)
     except Exception as exc:
-        st.error(f"資料庫初始化失敗: {exc}")
+        print(f"資料庫初始化失敗: {exc}")
         return
 
     from auth import hash_password  # local import to avoid circular dependency
@@ -121,4 +119,4 @@ def init_db(default_admin_username: str = "admin", default_admin_password: str =
                 session.add(admin)
                 session.commit()
     except Exception as exc:
-        st.error(f"建立預設管理員失敗: {exc}")
+        print(f"建立預設管理員失敗: {exc}")

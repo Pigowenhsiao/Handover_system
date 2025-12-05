@@ -1,5 +1,7 @@
-# 電子交接本 Streamlit 版依賴
-streamlit==1.31.0
+# 電子交接本桌面版依賴
+# tkinter 為系統套件（請確保已安裝 python3-tk）
 sqlalchemy==2.0.23
 pandas==2.2.0
 bcrypt==4.0.1
+openpyxl==3.1.2
+matplotlib==3.8.0
