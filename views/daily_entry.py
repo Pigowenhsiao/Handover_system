@@ -9,6 +9,7 @@ import streamlit as st
 from sqlalchemy.orm import Session
 
 from models import AttendanceEntry, DailyReport, EquipmentLog, LotLog
+from i18n import t
 
 
 ATTENDANCE_DEFAULT = pd.DataFrame(
@@ -49,81 +50,117 @@ def save_uploaded_files(files: List, upload_dir: str = "uploads") -> List[str]:
     return saved_paths
 
 
-def render_daily_entry(db: Session, user: Optional[Dict[str, str]]) -> None:
+def render_daily_entry(db: Session, user: Optional[Dict[str, str]], *, lang: str = "zh") -> None:
     if not user:
-        st.error("請先登入以填寫日報。")
+        st.error(t("need_login", locale=lang))
         return
+    st.header(t("daily_entry", locale=lang))
+    st.caption("💡 " + t("summary", locale=lang))
 
-    st.header("日報填寫")
     with st.form("daily-entry-form", clear_on_submit=True):
+        st.markdown("### 1️⃣ " + t("date", locale=lang) + " / " + t("shift", locale=lang) + " / " + t("area", locale=lang))
         col1, col2, col3 = st.columns(3)
         with col1:
-            report_date = st.date_input("日期", value=date.today())
+            report_date = st.date_input(t("date", locale=lang), value=date.today())
         with col2:
-            shift = st.selectbox("班別", SHIFT_OPTIONS, index=0)
+            shift = st.selectbox(t("shift", locale=lang), SHIFT_OPTIONS, index=0)
         with col3:
-            area = st.selectbox("區域", AREA_OPTIONS, index=0)
+            area = st.selectbox(t("area", locale=lang), AREA_OPTIONS, index=0)
 
-        st.subheader("出勤狀況")
+        st.markdown("### 2️⃣ " + t("attendance", locale=lang))
+        st.caption("• " + t("scheduled_count", locale=lang) + "/" + t("present_count", locale=lang) + "/" + t("absent_count", locale=lang) + " • " + t("reason", locale=lang))
         attendance_df = st.data_editor(
             ATTENDANCE_DEFAULT,
             num_rows="dynamic",
             use_container_width=True,
             key="attendance_editor",
             column_config={
-                "category": "分類",
-                "scheduled_count": "定員",
-                "present_count": "出勤",
-                "absent_count": "欠勤",
-                "reason": "理由",
+                "category": t("attendance_category", locale=lang),
+                "scheduled_count": t("scheduled_count", locale=lang),
+                "present_count": t("present_count", locale=lang),
+                "absent_count": t("absent_count", locale=lang),
+                "reason": t("reason", locale=lang),
             },
         )
 
-        st.subheader("設備異常")
+        st.markdown("### 3️⃣ " + t("equipment", locale=lang))
+        st.caption("• " + t("equip_id", locale=lang) + " / " + t("impact_qty", locale=lang) + " • " + t("start_time", locale=lang) + " / " + t("action_taken", locale=lang))
         equipment_df = st.data_editor(
             EQUIPMENT_DEFAULT,
             num_rows="dynamic",
             use_container_width=True,
             key="equipment_editor",
             column_config={
-                "equip_id": "設備番号",
-                "description": "異常內容",
-                "start_time": "發生時刻",
-                "impact_qty": "影響數量",
-                "action_taken": "對應內容",
+                "equip_id": t("equip_id", locale=lang),
+                "description": t("description", locale=lang),
+                "start_time": t("start_time", locale=lang),
+                "impact_qty": t("impact_qty", locale=lang),
+                "action_taken": t("action_taken", locale=lang),
             },
         )
 
-        st.subheader("本日異常批次")
+        st.markdown("### 4️⃣ " + t("lots", locale=lang))
+        st.caption("• " + t("lot_id", locale=lang) + " / " + t("status", locale=lang) + " • " + t("notes", locale=lang))
         lot_df = st.data_editor(
             LOT_DEFAULT,
             num_rows="dynamic",
             use_container_width=True,
             key="lot_editor",
             column_config={
-                "lot_id": "批號",
-                "description": "異常內容",
-                "status": "處置狀況",
-                "notes": "特記事項",
+                "lot_id": t("lot_id", locale=lang),
+                "description": t("description", locale=lang),
+                "status": t("status", locale=lang),
+                "notes": t("notes", locale=lang),
             },
         )
 
-        st.subheader("總結")
-        summary_key_output = st.text_area("Key Machine Output")
-        summary_issues = st.text_area("Key Issues")
-        summary_countermeasures = st.text_area("Countermeasures")
+        st.markdown("### 5️⃣ " + t("summary", locale=lang))
+        col_s1, col_s2, col_s3 = st.columns(3)
+        with col_s1:
+            summary_key_output = st.text_area(t("key_output", locale=lang), height=120)
+        with col_s2:
+            summary_issues = st.text_area(t("key_issues", locale=lang), height=120)
+        with col_s3:
+            summary_countermeasures = st.text_area(t("countermeasures", locale=lang), height=120)
 
-        uploaded_files = st.file_uploader("上傳照片 (可多選)", accept_multiple_files=True)
+        st.markdown("### 6️⃣ " + t("upload_photos", locale=lang))
+        uploaded_files = st.file_uploader(t("upload_photos", locale=lang), accept_multiple_files=True)
 
-        submitted = st.form_submit_button("提交")
+        submitted = st.form_submit_button("✅ " + t("submit", locale=lang))
 
     if not submitted:
+        return
+
+    # 驗證資料
+    errors: List[str] = []
+    att_rows = attendance_df.fillna("")
+    equip_rows = equipment_df.fillna("")
+    lot_rows = lot_df.fillna("")
+
+    for idx, row in att_rows.iterrows():
+        for field in ["scheduled_count", "present_count", "absent_count"]:
+            try:
+                value = int(row.get(field, 0) or 0)
+                if value < 0:
+                    errors.append(t("attendance_negative", locale=lang, row=idx + 1, field=field))
+            except ValueError:
+                errors.append(t("attendance_number", locale=lang, row=idx + 1, field=field))
+    for idx, row in equip_rows.iterrows():
+        try:
+            value = int(row.get("impact_qty", 0) or 0)
+            if value < 0:
+                errors.append(t("equipment_negative", locale=lang, row=idx + 1))
+        except ValueError:
+            errors.append(t("equipment_number", locale=lang, row=idx + 1))
+
+    if errors:
+        st.error(t("validation_fail", locale=lang, msg="\n".join(errors)))
         return
 
     try:
         image_paths = save_uploaded_files(uploaded_files) if uploaded_files else []
     except Exception as exc:
-        st.error(f"保存圖片失敗：{exc}")
+        st.error(t("save_image_fail", locale=lang, msg=exc))
         return
 
     try:
@@ -139,19 +176,19 @@ def render_daily_entry(db: Session, user: Optional[Dict[str, str]]) -> None:
         db.add(report)
         db.flush()
 
-        for _, row in attendance_df.fillna("").iterrows():
+        for _, row in att_rows.iterrows():
             db.add(
                 AttendanceEntry(
                     report_id=report.id,
                     category=str(row.get("category", "")),
-                    scheduled_count=int(row.get("scheduled_count", 0) or 0),
-                    present_count=int(row.get("present_count", 0) or 0),
-                    absent_count=int(row.get("absent_count", 0) or 0),
+                    scheduled_count=max(int(row.get("scheduled_count", 0) or 0), 0),
+                    present_count=max(int(row.get("present_count", 0) or 0), 0),
+                    absent_count=max(int(row.get("absent_count", 0) or 0), 0),
                     reason=str(row.get("reason", "")),
                 )
             )
 
-        for idx, row in equipment_df.fillna("").iterrows():
+        for idx, row in equip_rows.iterrows():
             image_path = image_paths[idx] if idx < len(image_paths) else None
             db.add(
                 EquipmentLog(
@@ -159,13 +196,13 @@ def render_daily_entry(db: Session, user: Optional[Dict[str, str]]) -> None:
                     equip_id=str(row.get("equip_id", "")),
                     description=str(row.get("description", "")),
                     start_time=str(row.get("start_time", "")),
-                    impact_qty=int(row.get("impact_qty", 0) or 0),
+                    impact_qty=max(int(row.get("impact_qty", 0) or 0), 0),
                     action_taken=str(row.get("action_taken", "")),
                     image_path=image_path,
                 )
             )
 
-        for _, row in lot_df.fillna("").iterrows():
+        for _, row in lot_rows.iterrows():
             db.add(
                 LotLog(
                     report_id=report.id,
@@ -177,7 +214,7 @@ def render_daily_entry(db: Session, user: Optional[Dict[str, str]]) -> None:
             )
 
         db.commit()
-        st.success("提交成功！")
+        st.success(t("submit_success", locale=lang))
     except Exception as exc:
         db.rollback()
-        st.error(f"提交失敗：{exc}")
+        st.error(t("submit_fail", locale=lang, msg=exc))

@@ -8,44 +8,45 @@ import streamlit as st
 from sqlalchemy import and_
 from sqlalchemy.orm import Session
 
+from i18n import t
 from models import DailyReport
 
 
-def render_report_view(db: Session) -> None:
-    st.header("歷史報表")
+def render_report_view(db: Session, *, lang: str = "zh") -> None:
+    st.header(t("history", locale=lang))
 
     today = date.today()
     start_date, end_date = st.date_input(
-        "選擇日期範圍",
+        t("select_range", locale=lang),
         value=(today.replace(day=1), today),
     )
-    area = st.selectbox("區域", ["全部", "etching_D", "etching_E", "litho", "thin_film"], index=0)
+    area = st.selectbox(t("area", locale=lang), [t("area_all", locale=lang), "etching_D", "etching_E", "litho", "thin_film"], index=0)
 
-    if st.button("查詢"):
+    if st.button(t("query", locale=lang)):
         query = db.query(DailyReport)
         try:
             if start_date and end_date:
                 query = query.filter(and_(DailyReport.date >= start_date, DailyReport.date <= end_date))
-            if area != "全部":
+            if area != t("area_all", locale=lang):
                 query = query.filter(DailyReport.area == area)
 
             reports = query.order_by(DailyReport.date.desc()).all()
         except Exception as exc:
-            st.error(f"查詢失敗：{exc}")
+            st.error(t("query_fail", locale=lang, msg=exc))
             return
 
         if not reports:
-            st.info("查無資料")
+            st.info(t("no_data", locale=lang))
             return
 
         data = [
             {
-                "日期": r.date,
-                "班別": r.shift,
-                "區域": r.area,
-                "填寫者ID": r.author_id,
-                "摘要": (r.summary_issues or "")[:50],
-                "建立時間": r.created_at,
+                t("date", locale=lang): r.date,
+                t("shift", locale=lang): r.shift,
+                t("area", locale=lang): r.area,
+                "ID": r.author_id,
+                t("summary", locale=lang): (r.summary_issues or "")[:50],
+                "created": r.created_at,
             }
             for r in reports
         ]
@@ -53,4 +54,4 @@ def render_report_view(db: Session) -> None:
         st.dataframe(df)
 
         csv_data = df.to_csv(index=False).encode("utf-8-sig")
-        st.download_button("匯出 CSV", data=csv_data, file_name="reports.csv", mime="text/csv")
+        st.download_button(t("export_csv", locale=lang), data=csv_data, file_name="reports.csv", mime="text/csv")
