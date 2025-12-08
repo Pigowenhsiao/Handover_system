@@ -19,3 +19,8 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 
 ## Communication
 - 與使用者互動時一律使用繁體中文回覆，無論使用者使用何種語言。
+
+## 執行環境（供後續協作參考）
+- sandbox_mode: danger-full-access
+- approval_policy: on-failure
+- network_access: restricted（如需網路請先確認）

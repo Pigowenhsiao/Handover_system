@@ -1,49 +1,21 @@
-# 電子交接本系統使用說明
+# 交接系統（桌面版）
 
-## 概述
-單機桌面應用（tkinter），Python 3.9+ 與本機 SQLite。支援登入、日報填寫（出勤、設備異常、異常批次、總結、照片路徑記錄）、報表查詢與匯出、趨勢圖表。介面文字為繁體中文。
+本專案是以 Tkinter 製作的單機桌面應用，支援中/英/日語切換，包含日報填寫、報表檢視與使用者/班別/區域管理。
 
-## 系統需求
-- Python 3.9+
-- 依賴套件：`sqlalchemy`, `pandas`, `bcrypt`, `openpyxl`, `matplotlib`（詳見 `requirements.txt`，需系統提供 tkinter / python3-tk）
-- 可讀寫本機 SQLite 檔案（無需遠端服務）
+## 主要功能
+- 多語言介面：登入、主畫面標題、報表、使用者管理皆可即時切換中/英/日。
+- 日報填寫：輸入日期、班別、區域，紀錄出勤、設備異常、異常 LOT 與摘要；若同日同班別同區域已有紀錄，會詢問是否覆寫以避免重複。
+- 報表檢視：出勤報表加入班別與區域欄位並提供期間總計（Shift/Area 顯示為 ALL）；雙擊列表可開啟明細視窗。
+- 匯出：出勤/設備/LOT 報表可匯出 CSV，欄位名稱隨語言切換。
+- 管理：使用者、班別、區域的列表支援雙擊開啟編輯視窗（僅保留單一視窗），可修改並儲存；維持新增、刪除與重設密碼功能。
+- 介面：每日輸入頁面提供水平/垂直捲軸，便於小螢幕瀏覽。
 
-## 快速開始
-1) 安裝 Python 3.9+  
-2) `pip install -r requirements.txt`  
-3) 執行 `python app.py`（或 `python3 app.py`）  
-4) 首次啟動會自動建立資料庫與預設管理員帳號（請登入後修改密碼）
+## 使用方式
+1. 安裝依賴：`pip install -r requirements.txt`
+2. 執行程式：`python app.py`
+3. 於登入畫面選擇語言並登入後，可在分頁間填寫日報、檢視報表或管理使用者/班別/區域。
 
-## 功能說明
-- 登入/登出：本機 Session 管理。
-- 日報填寫：PDF 對應欄位，班別/區域下拉；出勤預設兩行（正社員/契約），設備異常與異常批次可新增多筆；圖片路徑可記錄（未內嵌預覽）。
-- 總結：Key Machine Output / Key Issues / Countermeasures。
-- 報表：人員出勤/設備異常/異常 LOT 三種報表；支援日/週（週一~週日）/月/自訂期間；表格與圖表並列展示；各報表獨立 CSV 匯出。
-- 使用者管理（管理員）：新增/刪除/重設密碼。
-- 匯入：預留「匯入 Excel」按鈕（待提供格式後實作）。
-
-## 數據庫
-- 本機 SQLite 檔案，模型定義於 `models.py`。
-- 主要表格：User、DailyReport、AttendanceEntry、EquipmentLog、LotLog。
-
-## 技術架構
-- UI：tkinter，介面文字為繁體中文。
-- 應用層：本機 Session，Notebook 分頁導覽。
-- 資料層：SQLAlchemy ORM 對 SQLite，禁止 Raw SQL。
-
-## 注意事項
-1. 確保 `uploads/` 可寫入以儲存圖片。
-2. 不需網路與後端 API，所有邏輯本機執行。
-3. 密碼以 bcrypt 雜湊存放，請妥善保管管理員密碼。
-
-## 組織結構
-- `app.py`: tkinter 主入口、登入、分頁（填寫日報/歷史查詢/使用者管理）
-- `models.py`: SQLAlchemy 模型與 `init_db`
-- `auth.py`: 密碼雜湊與驗證
-- `uploads/`: 圖片儲存位置（目前記錄路徑，未自動複製）
-
-## 疑難排解
-1. 確認已安裝依賴 `pip install -r requirements.txt`
-2. 若啟動失敗，請查看終端錯誤訊息
-3. 確認 `app.py`、`models.py`、`auth.py` 存在且可讀
-4. 確認目前使用者對資料庫檔與 `uploads/` 有讀寫權限
+## 目前限制與備註
+- Excel 匯入尚未開放，畫面僅顯示占位提示。
+- 本版為單機作業，無 API 前後端分離。
+- 資料庫使用隨附的 SQLite 檔案 `handover_system.db`，如需重置可刪除後重新啟動讓程式初始化。

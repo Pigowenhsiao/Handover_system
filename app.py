@@ -30,110 +30,127 @@ from models import (
 # 版本資訊
 VERSION = "v0.3.2-桌面多語"
 
-# 語言資源
-LANGS = {"ja": "???", "en": "English", "zh": "??"}
+# 語言資源（上一版正常的可讀文字）
+LANGS = {"ja": "日本語", "en": "English", "zh": "中文"}
 TEXTS: Dict[str, Dict[str, str]] = {
-    "title": {"ja": "???????????????????", "en": "Handover System (Desktop)", "zh": "????????????"},
-    "login_title": {"ja": "??????????", "en": "Handover System", "zh": "???????"},
-    "login_username": {"ja": "?????", "en": "Username", "zh": "??"},
-    "login_password": {"ja": "?????", "en": "Password", "zh": "??"},
-    "login_button": {"ja": "????", "en": "Login", "zh": "??"},
-    "login_fail": {"ja": "??????", "en": "Login Failed", "zh": "????"},
-    "login_empty": {"ja": "?????????????????????", "en": "Username and password cannot be empty.", "zh": "??????????"},
-    "login_wrong": {"ja": "???????????????????????", "en": "Invalid username or password.", "zh": "????????"},
-    "db_error": {"ja": "??????????", "en": "Database error: ", "zh": "??????"},
-    "logout": {"ja": "?????", "en": "Logout", "zh": "??"},
-    "tab_daily": {"ja": "????", "en": "Daily Entry", "zh": "????"},
-    "tab_report": {"ja": "????", "en": "Reports", "zh": "??"},
-    "tab_user": {"ja": "??????", "en": "User Management", "zh": "?????"},
-    "base_info": {"ja": "????", "en": "Basic Info", "zh": "????"},
-    "date_label": {"ja": "?? YYYY-MM-DD", "en": "Date YYYY-MM-DD", "zh": "?? YYYY-MM-DD"},
-    "shift_label": {"ja": "???", "en": "Shift", "zh": "??"},
-    "area_label": {"ja": "???", "en": "Area", "zh": "??"},
-    "attendance": {"ja": "????", "en": "Attendance", "zh": "????"},
-    "att_category": {"ja": "??", "en": "Category", "zh": "??"},
-    "att_scheduled": {"ja": "??", "en": "Scheduled", "zh": "??"},
-    "att_present": {"ja": "??", "en": "Present", "zh": "??"},
-    "att_absent": {"ja": "??", "en": "Absent", "zh": "??"},
-    "att_reason": {"ja": "??", "en": "Reason", "zh": "??"},
-    "equipment": {"ja": "????", "en": "Equipment Issues", "zh": "????"},
-    "equip_id": {"ja": "??ID", "en": "Equipment ID", "zh": "????"},
-    "equip_desc": {"ja": "????", "en": "Description", "zh": "????"},
-    "equip_start": {"ja": "????", "en": "Start Time", "zh": "????"},
-    "equip_impact": {"ja": "????", "en": "Impact Qty", "zh": "????"},
-    "equip_action": {"ja": "??", "en": "Action Taken", "zh": "??"},
-    "equip_image": {"ja": "????", "en": "Image Path", "zh": "????"},
-    "lot": {"ja": "??LOT", "en": "Abnormal LOT", "zh": "????"},
-    "lot_id_col": {"ja": "LOT ID", "en": "Lot ID", "zh": "??"},
-    "lot_desc": {"ja": "????", "en": "Description", "zh": "????"},
-    "lot_status": {"ja": "????", "en": "Status", "zh": "????"},
-    "lot_notes": {"ja": "????", "en": "Notes", "zh": "????"},
-    "summary": {"ja": "????", "en": "Summary", "zh": "??"},
-    "import_excel": {"ja": "Excel ???????", "en": "Import Excel (coming soon)", "zh": "?? Excel?????"},
-    "submit": {"ja": "??", "en": "Submit", "zh": "??"},
-    "save_update": {"ja": "??/??", "en": "Save / Update", "zh": "??/??"},
-    "confirm_upload": {"ja": "????????", "en": "Confirm Upload", "zh": "????"},
-    "clear_form": {"ja": "???", "en": "Clear", "zh": "??"},
-    "load_existing": {"ja": "???????", "en": "Load Existing", "zh": "??????"},
-    "add": {"ja": "??", "en": "Add", "zh": "??"},
-    "success": {"ja": "??", "en": "Success", "zh": "??"},
-    "submit_ok": {"ja": "???????", "en": "Submitted successfully.", "zh": "?????"},
-    "submit_updated": {"ja": "???????", "en": "Updated successfully.", "zh": "?????"},
-    "error": {"ja": "???", "en": "Error", "zh": "??"},
-    "empty_data": {"ja": "??????????", "en": "No data found", "zh": "????"},
-    "report_att": {"ja": "??????", "en": "Attendance Report", "zh": "????"},
-    "report_equip": {"ja": "????????", "en": "Equipment Report", "zh": "??????"},
-    "report_lot": {"ja": "??LOT????", "en": "LOT Report", "zh": "?? LOT ??"},
-    "period_type": {"ja": "?????", "en": "Period Type", "zh": "????"},
-    "period_header": {"ja": "??", "en": "Period", "zh": "??"},
-    "count_label": {"ja": "??", "en": "Count", "zh": "??"},
-    "rate_label": {"ja": "???(%)", "en": "Attendance Rate (%)", "zh": "???(%)"},
-    "debug_label": {"ja": "DEBUG", "en": "DEBUG", "zh": "DEBUG"},
-    "dbg_reset_att": {"ja": "????????", "en": "Reset attendance rows", "zh": "?????"},
-    "dbg_select_att": {"ja": "????: {id}", "en": "Selected attendance: {id}", "zh": "?????: {id}"},
-    "dbg_btn_edit": {"ja": "?????: {id}", "en": "Edit via button: {id}", "zh": "????: {id}"},
-    "dbg_dbl_edit": {"ja": "?????????: {id}", "en": "Edit via double click: {id}", "zh": "????: {id}"},
-    "dbg_update_att": {"ja": "??: {id}", "en": "Updated: {id}", "zh": "??: {id}"},
-    "dbg_no_select": {"ja": "???????????", "en": "No row selected", "zh": "????"},
-    "err_select_row": {"ja": "???????????????", "en": "Please select a row to edit.", "zh": "??????????"},
-    "start_date": {"ja": "??? YYYY-MM-DD", "en": "Start Date YYYY-MM-DD", "zh": "???? YYYY-MM-DD"},
-    "end_date": {"ja": "??? YYYY-MM-DD", "en": "End Date YYYY-MM-DD", "zh": "???? YYYY-MM-DD"},
-    "search": {"ja": "??", "en": "Search", "zh": "??"},
-    "export_csv": {"ja": "CSV??", "en": "Export CSV", "zh": "?? CSV"},
-    "confirm_delete": {"ja": "??????????", "en": "Are you sure to delete?", "zh": "???????"},
-    "user": {"ja": "????", "en": "User", "zh": "???"},
-    "role": {"ja": "???", "en": "Role", "zh": "??"},
-    "password": {"ja": "?????", "en": "Password", "zh": "??"},
-    "add_user": {"ja": "??????", "en": "Add User", "zh": "?????"},
-    "reset_pw": {"ja": "?????????", "en": "Reset Password", "zh": "????"},
-    "delete_user": {"ja": "??????", "en": "Delete User", "zh": "?????"},
-    "option_title": {"ja": "?????????", "en": "Shift & Area Management", "zh": "???????"},
-    "shift_list": {"ja": "?????", "en": "Shift List", "zh": "????"},
-    "area_list": {"ja": "?????", "en": "Area List", "zh": "????"},
-    "name": {"ja": "??", "en": "Name", "zh": "??"},
-    "update": {"ja": "??", "en": "Update", "zh": "??"},
-    "delete": {"ja": "??", "en": "Delete", "zh": "??"},
-    "lang_label": {"ja": "??", "en": "Language", "zh": "??"},
-    "actions_section": {"ja": "??", "en": "Actions", "zh": "??"},
-    "summary_key": {"ja": "??????????", "en": "Key Machine Output", "zh": "??????"},
-    "summary_issues": {"ja": "????", "en": "Key Issues", "zh": "????"},
-    "summary_counter": {"ja": "??", "en": "Countermeasures", "zh": "??"},
-    "att_chart_title": {"ja": "?????", "en": "Attendance Trend", "zh": "?????"},
-    "equip_chart_title": {"ja": "??????", "en": "Equipment Issue Trend", "zh": "??????"},
-    "lot_chart_title": {"ja": "??LOT??", "en": "Abnormal LOT Trend", "zh": "?? LOT ??"},
-    "export": {"ja": "????", "en": "Export", "zh": "??"},
-    "export_no_data": {"ja": "?????????????", "en": "No data to export", "zh": "???????"},
-    "export_success": {"ja": "??????", "en": "Export succeeded", "zh": "????"},
-    "export_fail": {"ja": "??????", "en": "Export failed", "zh": "????"},
-    "export_att_title": {"ja": "???????????", "en": "Export Attendance Report", "zh": "??????"},
-    "export_equip_title": {"ja": "?????????????", "en": "Export Equipment Report", "zh": "????????"},
-    "export_lot_title": {"ja": "??LOT?????????", "en": "Export LOT Report", "zh": "???? LOT ??"},
-    "choose_image": {"ja": "?????", "en": "Choose Image", "zh": "????"},
-    "dialog_add_equip": {"ja": "???????", "en": "Add Equipment Issue", "zh": "??????"},
-    "dialog_add_lot": {"ja": "??LOT???", "en": "Add Abnormal LOT", "zh": "??????"},
-    "dialog_edit_att": {"ja": "?????", "en": "Edit Attendance", "zh": "????"},
-    "edit": {"ja": "??", "en": "Edit", "zh": "??"},
+    "title": {"ja": "引き継ぎシステム（デスクトップ版）", "en": "Handover System (Desktop)", "zh": "交接系統（桌面版）"},
+    "login_title": {"ja": "引き継ぎシステム", "en": "Handover System", "zh": "交接系統"},
+    "login_username": {"ja": "ユーザー名", "en": "Username", "zh": "帳號"},
+    "login_password": {"ja": "パスワード", "en": "Password", "zh": "密碼"},
+    "login_button": {"ja": "ログイン", "en": "Login", "zh": "登入"},
+    "login_fail": {"ja": "ログイン失敗", "en": "Login Failed", "zh": "登入失敗"},
+    "login_empty": {"ja": "ユーザー名とパスワードを入力してください。", "en": "Username and password cannot be empty.", "zh": "帳號與密碼不可空白。"},
+    "login_wrong": {"ja": "ユーザー名またはパスワードが違います。", "en": "Invalid username or password.", "zh": "帳號或密碼不正確。"},
+    "db_error": {"ja": "データベースエラー：", "en": "Database error: ", "zh": "資料庫錯誤："},
+    "logout": {"ja": "ログアウト", "en": "Logout", "zh": "登出"},
+    "tab_daily": {"ja": "日報入力", "en": "Daily Entry", "zh": "日常輸入"},
+    "tab_report": {"ja": "報表", "en": "Reports", "zh": "報表"},
+    "tab_user": {"ja": "ユーザー管理", "en": "User Management", "zh": "使用者管理"},
+    "base_info": {"ja": "基本情報", "en": "Basic Info", "zh": "基本資料"},
+    "date_label": {"ja": "日付 YYYY-MM-DD", "en": "Date YYYY-MM-DD", "zh": "日期 YYYY-MM-DD"},
+    "shift_label": {"ja": "シフト", "en": "Shift", "zh": "班別"},
+    "area_label": {"ja": "エリア", "en": "Area", "zh": "區域"},
+    "attendance": {"ja": "出勤", "en": "Attendance", "zh": "出勤"},
+    "att_category": {"ja": "区分", "en": "Category", "zh": "類別"},
+    "att_scheduled": {"ja": "予定", "en": "Scheduled", "zh": "預排"},
+    "att_present": {"ja": "出勤", "en": "Present", "zh": "實到"},
+    "att_absent": {"ja": "欠勤", "en": "Absent", "zh": "缺勤"},
+    "att_reason": {"ja": "理由", "en": "Reason", "zh": "原因"},
+    "equipment": {"ja": "設備トラブル", "en": "Equipment Issues", "zh": "設備異常"},
+    "equip_id": {"ja": "設備ID", "en": "Equipment ID", "zh": "設備ID"},
+    "equip_desc": {"ja": "内容", "en": "Description", "zh": "內容"},
+    "equip_start": {"ja": "開始時刻", "en": "Start Time", "zh": "開始時間"},
+    "equip_impact": {"ja": "影響数量", "en": "Impact Qty", "zh": "影響數量"},
+    "equip_action": {"ja": "対策", "en": "Action Taken", "zh": "處置"},
+    "equip_image": {"ja": "画像パス", "en": "Image Path", "zh": "圖片路徑"},
+    "lot": {"ja": "異常LOT", "en": "Abnormal LOT", "zh": "異常LOT"},
+    "lot_id_col": {"ja": "LOT ID", "en": "Lot ID", "zh": "LOT ID"},
+    "lot_desc": {"ja": "内容", "en": "Description", "zh": "內容"},
+    "lot_status": {"ja": "状態", "en": "Status", "zh": "狀態"},
+    "lot_notes": {"ja": "備考", "en": "Notes", "zh": "備註"},
+    "summary": {"ja": "サマリー", "en": "Summary", "zh": "摘要"},
+    "import_excel": {"ja": "Excel取込（準備中）", "en": "Import Excel (coming soon)", "zh": "匯入 Excel（稍後提供）"},
+    "submit": {"ja": "送信", "en": "Submit", "zh": "送出"},
+    "save_update": {"ja": "保存/更新", "en": "Save / Update", "zh": "儲存/更新"},
+    "confirm_upload": {"ja": "アップロード確定", "en": "Confirm Upload", "zh": "確認上傳"},
+    "clear_form": {"ja": "クリア", "en": "Clear", "zh": "清除"},
+    "load_existing": {"ja": "既存データ読込", "en": "Load Existing", "zh": "讀取既有資料"},
+    "add": {"ja": "追加", "en": "Add", "zh": "新增"},
+    "success": {"ja": "成功", "en": "Success", "zh": "成功"},
+    "submit_ok": {"ja": "送信しました。", "en": "Submitted successfully.", "zh": "送出成功。"},
+    "submit_updated": {"ja": "更新しました。", "en": "Updated successfully.", "zh": "更新完成。"},
+    "error": {"ja": "エラー", "en": "Error", "zh": "錯誤"},
+    "empty_data": {"ja": "データが見つかりません", "en": "No data found", "zh": "查無資料"},
+    "report_att": {"ja": "出勤レポート", "en": "Attendance Report", "zh": "出勤報表"},
+    "report_equip": {"ja": "設備レポート", "en": "Equipment Report", "zh": "設備報表"},
+    "report_lot": {"ja": "LOTレポート", "en": "LOT Report", "zh": "LOT 報表"},
+    "period_type": {"ja": "集計単位", "en": "Period Type", "zh": "區間種類"},
+    "period_header": {"ja": "期間", "en": "Period", "zh": "期間"},
+    "count_label": {"ja": "件数", "en": "Count", "zh": "筆數"},
+    "rate_label": {"ja": "出勤率(%)", "en": "Attendance Rate (%)", "zh": "出勤率(%)"},
+    "debug_label": {"ja": "デバッグ", "en": "DEBUG", "zh": "DEBUG"},
+    "dbg_reset_att": {"ja": "出勤行を初期化", "en": "Reset attendance rows", "zh": "重置出勤列"},
+    "dbg_select_att": {"ja": "選択中: {id}", "en": "Selected attendance: {id}", "zh": "選擇列: {id}"},
+    "dbg_btn_edit": {"ja": "ボタン編集: {id}", "en": "Edit via button: {id}", "zh": "按鈕編輯: {id}"},
+    "dbg_dbl_edit": {"ja": "ダブルクリック編集: {id}", "en": "Edit via double click: {id}", "zh": "雙擊編輯: {id}"},
+    "dbg_update_att": {"ja": "更新: {id}", "en": "Updated: {id}", "zh": "已更新: {id}"},
+    "dbg_no_select": {"ja": "行が選択されていません", "en": "No row selected", "zh": "尚未選取任何列"},
+    "err_select_row": {"ja": "編集する行を選択してください。", "en": "Please select a row to edit.", "zh": "請先選擇要編輯的列。"},
+    "start_date": {"ja": "開始日 YYYY-MM-DD", "en": "Start Date YYYY-MM-DD", "zh": "起日 YYYY-MM-DD"},
+    "end_date": {"ja": "終了日 YYYY-MM-DD", "en": "End Date YYYY-MM-DD", "zh": "迄日 YYYY-MM-DD"},
+    "search": {"ja": "検索", "en": "Search", "zh": "查詢"},
+    "export_csv": {"ja": "CSV出力", "en": "Export CSV", "zh": "匯出 CSV"},
+    "confirm_delete": {"ja": "削除してよいですか？", "en": "Are you sure to delete?", "zh": "確定要刪除嗎？"},
+    "user": {"ja": "ユーザー", "en": "User", "zh": "使用者"},
+    "role": {"ja": "権限", "en": "Role", "zh": "角色"},
+    "password": {"ja": "パスワード", "en": "Password", "zh": "密碼"},
+    "add_user": {"ja": "ユーザー追加", "en": "Add User", "zh": "新增使用者"},
+    "reset_pw": {"ja": "パスワードリセット", "en": "Reset Password", "zh": "重設密碼"},
+    "delete_user": {"ja": "ユーザー削除", "en": "Delete User", "zh": "刪除使用者"},
+    "option_title": {"ja": "シフト・エリア管理", "en": "Shift & Area Management", "zh": "班別/區域管理"},
+    "shift_list": {"ja": "シフト一覧", "en": "Shift List", "zh": "班別列表"},
+    "area_list": {"ja": "エリア一覧", "en": "Area List", "zh": "區域列表"},
+    "name": {"ja": "名称", "en": "Name", "zh": "名稱"},
+    "update": {"ja": "更新", "en": "Update", "zh": "更新"},
+    "delete": {"ja": "削除", "en": "Delete", "zh": "刪除"},
+    "lang_label": {"ja": "言語", "en": "Language", "zh": "語言"},
+    "actions_section": {"ja": "操作", "en": "Actions", "zh": "操作"},
+    "summary_key": {"ja": "重要設備の出力", "en": "Key Machine Output", "zh": "重要設備產出"},
+    "summary_issues": {"ja": "主要課題", "en": "Key Issues", "zh": "關鍵問題"},
+    "summary_counter": {"ja": "対策", "en": "Countermeasures", "zh": "對策"},
+    "att_chart_title": {"ja": "出勤率トレンド", "en": "Attendance Trend", "zh": "出勤率趨勢"},
+    "equip_chart_title": {"ja": "設備異常トレンド", "en": "Equipment Issue Trend", "zh": "設備異常趨勢"},
+    "lot_chart_title": {"ja": "異常LOTトレンド", "en": "Abnormal LOT Trend", "zh": "異常 LOT 趨勢"},
+    "export": {"ja": "エクスポート", "en": "Export", "zh": "匯出"},
+    "export_no_data": {"ja": "出力するデータがありません", "en": "No data to export", "zh": "沒有可匯出的資料"},
+    "export_success": {"ja": "エクスポート成功", "en": "Export succeeded", "zh": "匯出成功"},
+    "export_fail": {"ja": "エクスポート失敗", "en": "Export failed", "zh": "匯出失敗"},
+    "export_att_title": {"ja": "出勤レポート出力", "en": "Export Attendance Report", "zh": "匯出出勤報表"},
+    "export_equip_title": {"ja": "設備レポート出力", "en": "Export Equipment Report", "zh": "匯出設備報表"},
+    "export_lot_title": {"ja": "LOTレポート出力", "en": "Export LOT Report", "zh": "匯出 LOT 報表"},
+    "choose_image": {"ja": "画像選択", "en": "Choose Image", "zh": "選擇圖片"},
+    "dialog_add_equip": {"ja": "設備異常の追加", "en": "Add Equipment Issue", "zh": "新增設備異常"},
+    "dialog_add_lot": {"ja": "異常LOTの追加", "en": "Add Abnormal LOT", "zh": "新增異常 LOT"},
+    "dialog_edit_att": {"ja": "出勤の編集", "en": "Edit Attendance", "zh": "編輯出勤"},
+    "edit": {"ja": "編集", "en": "Edit", "zh": "編輯"},
+    "version_label": {"ja": "バージョン", "en": "Version", "zh": "版本"},
+    "id_label": {"ja": "ID", "en": "ID", "zh": "ID"},
+    "shift_name": {"ja": "シフト名", "en": "Shift Name", "zh": "班別名稱"},
+    "area_name": {"ja": "エリア名", "en": "Area Name", "zh": "區域名稱"},
+    "aggregate": {"ja": "集計", "en": "Aggregate", "zh": "彙總"},
+    "info": {"ja": "情報", "en": "Info", "zh": "提示"},
+    "duplicate_title": {"ja": "データ重複", "en": "Duplicate Data", "zh": "資料重複"},
+    "duplicate_prompt": {"ja": "同じ日付・シフト・エリアのデータが存在します。上書きしますか？", "en": "Data for the same date, shift, and area already exists. Overwrite?", "zh": "同一天同區域同班別的資料已存在，是否覆寫？"},
+    "duplicate_skip": {"ja": "保存を中止しました。", "en": "Save skipped.", "zh": "已取消寫入。"},
+    "confirm_upload_prompt": {"ja": "全ての欄位（サマリー含む）をアップロードしてよいですか？", "en": "Upload all fields (including summary)?", "zh": "是否確認上傳全部欄位（含總結）？"},
+    "detail_title": {"ja": "データ詳細", "en": "Row Details", "zh": "資料明細"},
+    "date_format_invalid": {"ja": "日付は YYYY-MM-DD 形式で入力してください", "en": "Date format must be YYYY-MM-DD", "zh": "日期格式需為 YYYY-MM-DD"},
+    "dialog_edit_user": {"ja": "ユーザー編集", "en": "Edit User", "zh": "編輯使用者"},
+    "dialog_edit_shift": {"ja": "シフト編集", "en": "Edit Shift", "zh": "編輯班別"},
+    "dialog_edit_area": {"ja": "エリア編集", "en": "Edit Area", "zh": "編輯區域"},
+    "total": {"ja": "合計", "en": "Total", "zh": "總計"},
 }
+
 
 class HandoverApp(tk.Tk):
     def __init__(self) -> None:
@@ -142,6 +159,7 @@ class HandoverApp(tk.Tk):
         self.title(f"{self._t('title')} {VERSION}")
         self.geometry("1100x720")
         self.resizable(True, True)
+        self.minsize(800, 600)
         self.session_user: Optional[Dict[str, str]] = None
         self.shift_options: List[str] = []
         self.area_options: List[str] = []
@@ -155,15 +173,24 @@ class HandoverApp(tk.Tk):
     def _t(self, key: str) -> str:
         return TEXTS.get(key, {}).get(self.lang, TEXTS.get(key, {}).get("zh", key))
 
+    def _lang_name(self, code: str) -> str:
+        return LANGS.get(code, code)
+
+    def _lang_code_from_name(self, name: str) -> str:
+        for code, label in LANGS.items():
+            if label == name:
+                return code
+        return name
+
     def _build_login(self) -> None:
         self.login_frame = ttk.Frame(self)
         self.login_frame.pack(expand=True)
 
-        self.lang_var = tk.StringVar(value=self.lang)
+        self.lang_var = tk.StringVar(value=self._lang_name(self.lang))
         lang_frame = ttk.Frame(self.login_frame)
         lang_frame.grid(row=0, column=0, columnspan=2, pady=5)
         ttk.Label(lang_frame, text=self._t("lang_label")).pack(side="left", padx=5)
-        lang_combo = ttk.Combobox(lang_frame, textvariable=self.lang_var, values=list(LANGS.keys()), state="readonly", width=8)
+        lang_combo = ttk.Combobox(lang_frame, textvariable=self.lang_var, values=list(LANGS.values()), state="readonly", width=10)
         lang_combo.pack(side="left")
         lang_combo.bind("<<ComboboxSelected>>", self._switch_language)
 
@@ -204,14 +231,17 @@ class HandoverApp(tk.Tk):
     def _build_main_ui(self) -> None:
         top_bar = ttk.Frame(self)
         top_bar.pack(fill="x")
-        ttk.Label(top_bar, text=f"版本：{VERSION}").pack(side="left", padx=10, pady=5)
-        ttk.Label(top_bar, text=f"{self._t('user')}：{self.session_user['username']}（{self.session_user['role']}）").pack(side="left", padx=10, pady=5)
+        ttk.Label(top_bar, text=f"{self._t('version_label')}: {VERSION}").pack(side="left", padx=10, pady=5)
+        ttk.Label(
+            top_bar,
+            text=f"{self._t('user')}: {self.session_user['username']} ({self.session_user['role']})",
+        ).pack(side="left", padx=10, pady=5)
         ttk.Button(top_bar, text=self._t("logout"), command=self._logout).pack(side="right", padx=10)
         lang_frame = ttk.Frame(top_bar)
         lang_frame.pack(side="right", padx=10)
         ttk.Label(lang_frame, text=self._t("lang_label")).pack(side="left", padx=5)
-        self.lang_var = tk.StringVar(value=self.lang)
-        lang_combo = ttk.Combobox(lang_frame, textvariable=self.lang_var, values=list(LANGS.keys()), state="readonly", width=8)
+        self.lang_var = tk.StringVar(value=self._lang_name(self.lang))
+        lang_combo = ttk.Combobox(lang_frame, textvariable=self.lang_var, values=list(LANGS.values()), state="readonly", width=10)
         lang_combo.pack(side="left")
         lang_combo.bind("<<ComboboxSelected>>", self._switch_language)
 
@@ -238,6 +268,7 @@ class HandoverApp(tk.Tk):
         self._build_report_tab()
         if self.session_user.get("role") == "admin":
             self._build_user_tab()
+        self.bind("<Configure>", self._on_resize)
 
     def _logout(self) -> None:
         self.session_user = None
@@ -282,7 +313,7 @@ class HandoverApp(tk.Tk):
                 self.area_var.set(self.area_options[0])
 
     def _switch_language(self, *_: object) -> None:
-        self.lang = self.lang_var.get()
+        self.lang = self._lang_code_from_name(self.lang_var.get())
         self.title(f"{self._t('title')} {VERSION}")
         for widget in self.winfo_children():
             widget.destroy()
@@ -298,6 +329,38 @@ class HandoverApp(tk.Tk):
             self.debug_var.set(tpl.format(**kwargs))
         except Exception:
             self.debug_var.set(tpl)
+
+    def _on_resize(self, event: tk.Event) -> None:
+        """Adaptive resize for daily canvas when window >= 800x600."""
+        try:
+            width = self.winfo_width()
+            height = self.winfo_height()
+        except Exception:
+            return
+        if width < 800 or height < 600:
+            return
+        if hasattr(self, "daily_canvas") and hasattr(self, "daily_window_id"):
+            # Leave small padding for scrollbars/top bars
+            new_w = max(200, width - 40)
+            new_h = max(200, height - 200)
+            self.daily_canvas.config(width=new_w, height=new_h)
+            self.daily_canvas.itemconfig(self.daily_window_id, width=new_w)
+    def _show_detail_window(self, tree: ttk.Treeview, title: str) -> None:
+        """Double-click helper to show a simple detail window for report rows."""
+        selection = tree.selection()
+        if not selection:
+            messagebox.showinfo(self._t("info"), self._t("err_select_row"))
+            return
+        cols = tree["columns"]
+        values = tree.item(selection[0], "values")
+        win = tk.Toplevel(self)
+        win.title(f"{title} - {self._t('detail_title')}")
+        frame = ttk.Frame(win)
+        frame.pack(fill="both", expand=True, padx=12, pady=12)
+        for idx, (col, val) in enumerate(zip(cols, values)):
+            label = tree.heading(col).get("text") or col
+            ttk.Label(frame, text=label).grid(row=idx, column=0, sticky="e", padx=6, pady=4)
+            ttk.Label(frame, text=val, wraplength=420, justify="left").grid(row=idx, column=1, sticky="w", padx=6, pady=4)
 
     # ================= 報表：出勤 =================
     def _build_attendance_report_tab(self) -> None:
@@ -320,12 +383,14 @@ class HandoverApp(tk.Tk):
 
         self.att_report_tree = ttk.Treeview(
             self.att_tab,
-            columns=("period", "scheduled", "present", "absent", "rate"),
+            columns=("period", "shift", "area", "scheduled", "present", "absent", "rate"),
             show="headings",
             height=12,
         )
         att_headers = [
             self._t("period_header"),
+            self._t("shift_label"),
+            self._t("area_label"),
             self._t("att_scheduled"),
             self._t("att_present"),
             self._t("att_absent"),
@@ -333,10 +398,13 @@ class HandoverApp(tk.Tk):
         ]
         for col, text in zip(self.att_report_tree["columns"], att_headers):
             self.att_report_tree.heading(col, text=text)
-            self.att_report_tree.column(col, width=140)
+            self.att_report_tree.column(col, width=120)
         self.att_report_tree.pack(fill="both", expand=True, padx=10, pady=5)
+        self.att_report_tree.bind(
+            "<Double-1>", lambda e: self._show_detail_window(self.att_report_tree, self._t("report_att"))
+        )
 
-        self.att_chart_frame = ttk.LabelFrame(self.att_tab, text="出勤率趨勢")
+        self.att_chart_frame = ttk.LabelFrame(self.att_tab, text=self._t("att_chart_title"))
         self.att_chart_frame.pack(fill="both", expand=True, padx=10, pady=5)
 
     def _load_attendance_report(self) -> None:
@@ -347,7 +415,7 @@ class HandoverApp(tk.Tk):
             start_date = datetime.strptime(start_str, "%Y-%m-%d").date() if start_str else None
             end_date = datetime.strptime(end_str, "%Y-%m-%d").date() if end_str else None
         except ValueError:
-            messagebox.showerror(self._t("error"), "日期格式應為 YYYY-MM-DD")
+            messagebox.showerror(self._t("error"), self._t("date_format_invalid"))
             return
 
         try:
@@ -370,6 +438,8 @@ class HandoverApp(tk.Tk):
             data.append(
                 {
                     "date": rep.date,
+                    "shift": rep.shift,
+                    "area": rep.area,
                     "scheduled": att.scheduled_count,
                     "present": att.present_count,
                     "absent": att.absent_count,
@@ -386,32 +456,50 @@ class HandoverApp(tk.Tk):
             return d - timedelta(days=d.weekday())
 
         if mode == "日":
-            grouped = df.groupby("date", as_index=False).sum()
-            grouped["period"] = grouped["date"].astype(str)
+            df["period"] = df["date"]
         elif mode == "週":
-            df["week_start"] = df["date"].apply(start_of_week)
-            grouped = df.groupby("week_start", as_index=False).sum()
-            grouped["period"] = grouped["week_start"].astype(str)
+            df["period"] = df["date"].apply(start_of_week)
         elif mode == "月":
-            df["month"] = df["date"].apply(lambda d: d.strftime("%Y-%m"))
-            grouped = df.groupby("month", as_index=False).sum()
-            grouped["period"] = grouped["month"]
+            df["period"] = df["date"].apply(lambda d: d.strftime("%Y-%m"))
         else:  # 自訂
-            grouped = df.groupby("date", as_index=False).sum()
-            grouped["period"] = grouped["date"].astype(str)
+            df["period"] = df["date"]
 
-        grouped["rate"] = grouped.apply(lambda r: "" if r["scheduled"] == 0 else round(r["present"] * 100 / r["scheduled"], 1), axis=1)
+        def calc_rate(scheduled: float, present: float) -> str:
+            return "" if scheduled == 0 else round(present * 100 / scheduled, 1)
+
+        # 詳細資料
+        df["period_str"] = df["period"].astype(str)
+        df["rate"] = df.apply(lambda r: calc_rate(r["scheduled"], r["present"]), axis=1)
+
+        # 每個期間加總行（ALL/ALL）
+        total_rows = (
+            df.groupby("period", as_index=False)[["scheduled", "present", "absent"]]
+            .sum()
+            .assign(shift=self._t("total"), area=self._t("total"))
+        )
+        total_rows["period_str"] = total_rows["period"].astype(str)
+        total_rows["rate"] = total_rows.apply(lambda r: calc_rate(r["scheduled"], r["present"]), axis=1)
 
         self._clear_tree(self.att_report_tree)
-        for _, r in grouped.iterrows():
-            self.att_report_tree.insert("", "end", values=(r["period"], r["scheduled"], r["present"], r["absent"], r["rate"]))
+        for _, r in df.iterrows():
+            self.att_report_tree.insert(
+                "",
+                "end",
+                values=(r["period_str"], r["shift"], r["area"], r["scheduled"], r["present"], r["absent"], r["rate"]),
+            )
+        for _, r in total_rows.iterrows():
+            self.att_report_tree.insert(
+                "",
+                "end",
+                values=(r["period_str"], r["shift"], r["area"], r["scheduled"], r["present"], r["absent"], r["rate"]),
+            )
 
         # Chart
         fig, ax = plt.subplots(figsize=(7, 3))
-        ax.plot(grouped["period"], [r if r != "" else 0 for r in grouped["rate"]], marker="o")
-        ax.set_ylabel("出勤率(%)")
-        ax.set_xlabel("期間")
-        ax.set_title("出勤率趨勢")
+        ax.plot(total_rows["period_str"], [r if r != "" else 0 for r in total_rows["rate"]], marker="o")
+        ax.set_ylabel(self._t("rate_label"))
+        ax.set_xlabel(self._t("period_header"))
+        ax.set_title(self._t("att_chart_title"))
         ax.grid(True, linestyle="--", alpha=0.4)
         plt.xticks(rotation=45, ha="right")
         self._embed_chart(self.att_chart_frame, "att_chart_canvas", fig)
@@ -419,20 +507,32 @@ class HandoverApp(tk.Tk):
     def _export_attendance_csv(self) -> None:
         rows = [self.att_report_tree.item(i, "values") for i in self.att_report_tree.get_children()]
         if not rows:
-            messagebox.showinfo(self._t("success"), "沒有資料可匯出")
+            messagebox.showinfo(self._t("export"), self._t("export_no_data"))
             return
-        path = filedialog.asksaveasfilename(defaultextension=".csv", filetypes=[("CSV", "*.csv")], title="匯出出勤報表")
+        path = filedialog.asksaveasfilename(
+            defaultextension=".csv", filetypes=[("CSV", "*.csv")], title=self._t("export_att_title")
+        )
         if not path:
             return
         try:
             with open(path, "w", newline="", encoding="utf-8-sig") as f:
                 writer = csv.writer(f)
-                writer.writerow(["期間", "應出勤", "實際出勤", "缺勤", "出勤率(%)"])
+                writer.writerow(
+                    [
+                        self._t("period_header"),
+                        self._t("shift_label"),
+                        self._t("area_label"),
+                        self._t("att_scheduled"),
+                        self._t("att_present"),
+                        self._t("att_absent"),
+                        self._t("rate_label"),
+                    ]
+                )
                 for row in rows:
                     writer.writerow(row)
-            messagebox.showinfo("匯出", "匯出成功")
+            messagebox.showinfo(self._t("export"), self._t("export_success"))
         except Exception as exc:
-            messagebox.showerror("匯出失敗", f"{exc}")
+            messagebox.showerror(self._t("export_fail"), f"{exc}")
 
     # ================= 報表：設備異常 =================
     def _build_equipment_report_tab(self) -> None:
@@ -470,8 +570,11 @@ class HandoverApp(tk.Tk):
             self.equip_tree_detail.heading(col, text=text)
             self.equip_tree_detail.column(col, width=140)
         self.equip_tree_detail.pack(fill="both", expand=True, padx=10, pady=5)
+        self.equip_tree_detail.bind(
+            "<Double-1>", lambda e: self._show_detail_window(self.equip_tree_detail, self._t("report_equip"))
+        )
 
-        agg_frame = ttk.LabelFrame(self.equip_tab, text="彙總")
+        agg_frame = ttk.LabelFrame(self.equip_tab, text=self._t("aggregate"))
         agg_frame.pack(fill="both", expand=True, padx=10, pady=5)
         self.equip_tree_agg = ttk.Treeview(
             agg_frame,
@@ -484,8 +587,11 @@ class HandoverApp(tk.Tk):
             self.equip_tree_agg.column(col, width=150)
         self.equip_tree_agg.pack(side="left", fill="both", expand=True, padx=5, pady=5)
         ttk.Scrollbar(agg_frame, orient="vertical", command=self.equip_tree_agg.yview).pack(side="left", fill="y")
+        self.equip_tree_agg.bind(
+            "<Double-1>", lambda e: self._show_detail_window(self.equip_tree_agg, self._t("report_equip"))
+        )
 
-        self.equip_chart_frame = ttk.LabelFrame(self.equip_tab, text="設備異常趨勢")
+        self.equip_chart_frame = ttk.LabelFrame(self.equip_tab, text=self._t("equip_chart_title"))
         self.equip_chart_frame.pack(fill="both", expand=True, padx=10, pady=5)
 
     def _load_equipment_report(self) -> None:
@@ -496,7 +602,7 @@ class HandoverApp(tk.Tk):
             start_date = datetime.strptime(start_str, "%Y-%m-%d").date() if start_str else None
             end_date = datetime.strptime(end_str, "%Y-%m-%d").date() if end_str else None
         except ValueError:
-            messagebox.showerror("錯誤", "日期格式應為 YYYY-MM-DD")
+            messagebox.showerror(self._t("error"), self._t("date_format_invalid"))
             return
         try:
             with SessionLocal() as db:
@@ -557,29 +663,40 @@ class HandoverApp(tk.Tk):
 
         fig, ax = plt.subplots(figsize=(7, 3))
         ax.bar(grouped["period"], grouped["size"])
-        ax.set_ylabel("筆數")
-        ax.set_xlabel("期間")
-        ax.set_title("設備異常趨勢")
+        ax.set_ylabel(self._t("count_label"))
+        ax.set_xlabel(self._t("period_header"))
+        ax.set_title(self._t("equip_chart_title"))
         plt.xticks(rotation=45, ha="right")
         self._embed_chart(self.equip_chart_frame, "equip_chart_canvas", fig)
 
     def _export_equipment_csv(self) -> None:
         rows = [self.equip_tree_detail.item(i, "values") for i in self.equip_tree_detail.get_children()]
         if not rows:
-            messagebox.showinfo("匯出", "沒有資料可匯出")
+            messagebox.showinfo(self._t("export"), self._t("export_no_data"))
             return
-        path = filedialog.asksaveasfilename(defaultextension=".csv", filetypes=[("CSV", "*.csv")], title="匯出設備異常報表")
+        path = filedialog.asksaveasfilename(
+            defaultextension=".csv", filetypes=[("CSV", "*.csv")], title=self._t("export_equip_title")
+        )
         if not path:
             return
         try:
             with open(path, "w", newline="", encoding="utf-8-sig") as f:
                 writer = csv.writer(f)
-                writer.writerow(["日期", "區域", "設備", "異常內容", "影響數量", "對應內容"])
+                writer.writerow(
+                    [
+                        self._t("date_label"),
+                        self._t("area_label"),
+                        self._t("equip_id"),
+                        self._t("equip_desc"),
+                        self._t("equip_impact"),
+                        self._t("equip_action"),
+                    ]
+                )
                 for row in rows:
                     writer.writerow(row)
-            messagebox.showinfo("匯出", "匯出成功")
+            messagebox.showinfo(self._t("export"), self._t("export_success"))
         except Exception as exc:
-            messagebox.showerror("匯出失敗", f"{exc}")
+            messagebox.showerror(self._t("export_fail"), f"{exc}")
 
     # ================= 報表：異常 LOT =================
     def _build_lot_report_tab(self) -> None:
@@ -617,8 +734,11 @@ class HandoverApp(tk.Tk):
             self.lot_tree_detail.heading(col, text=text)
             self.lot_tree_detail.column(col, width=140)
         self.lot_tree_detail.pack(fill="both", expand=True, padx=10, pady=5)
+        self.lot_tree_detail.bind(
+            "<Double-1>", lambda e: self._show_detail_window(self.lot_tree_detail, self._t("report_lot"))
+        )
 
-        agg_frame = ttk.LabelFrame(self.lot_tab, text="彙總")
+        agg_frame = ttk.LabelFrame(self.lot_tab, text=self._t("aggregate"))
         agg_frame.pack(fill="both", expand=True, padx=10, pady=5)
         self.lot_tree_agg = ttk.Treeview(
             agg_frame,
@@ -631,8 +751,11 @@ class HandoverApp(tk.Tk):
             self.lot_tree_agg.column(col, width=150)
         self.lot_tree_agg.pack(side="left", fill="both", expand=True, padx=5, pady=5)
         ttk.Scrollbar(agg_frame, orient="vertical", command=self.lot_tree_agg.yview).pack(side="left", fill="y")
+        self.lot_tree_agg.bind(
+            "<Double-1>", lambda e: self._show_detail_window(self.lot_tree_agg, self._t("report_lot"))
+        )
 
-        self.lot_chart_frame = ttk.LabelFrame(self.lot_tab, text="異常 LOT 趨勢")
+        self.lot_chart_frame = ttk.LabelFrame(self.lot_tab, text=self._t("lot_chart_title"))
         self.lot_chart_frame.pack(fill="both", expand=True, padx=10, pady=5)
 
     def _load_lot_report(self) -> None:
@@ -643,7 +766,7 @@ class HandoverApp(tk.Tk):
             start_date = datetime.strptime(start_str, "%Y-%m-%d").date() if start_str else None
             end_date = datetime.strptime(end_str, "%Y-%m-%d").date() if end_str else None
         except ValueError:
-            messagebox.showerror("錯誤", "日期格式應為 YYYY-MM-DD")
+            messagebox.showerror(self._t("error"), self._t("date_format_invalid"))
             return
         try:
             with SessionLocal() as db:
@@ -704,29 +827,40 @@ class HandoverApp(tk.Tk):
 
         fig, ax = plt.subplots(figsize=(7, 3))
         ax.bar(grouped["period"], grouped["size"])
-        ax.set_ylabel("筆數")
-        ax.set_xlabel("期間")
-        ax.set_title("異常 LOT 趨勢")
+        ax.set_ylabel(self._t("count_label"))
+        ax.set_xlabel(self._t("period_header"))
+        ax.set_title(self._t("lot_chart_title"))
         plt.xticks(rotation=45, ha="right")
         self._embed_chart(self.lot_chart_frame, "lot_chart_canvas", fig)
 
     def _export_lot_csv(self) -> None:
         rows = [self.lot_tree_detail.item(i, "values") for i in self.lot_tree_detail.get_children()]
         if not rows:
-            messagebox.showinfo("匯出", "沒有資料可匯出")
+            messagebox.showinfo(self._t("export"), self._t("export_no_data"))
             return
-        path = filedialog.asksaveasfilename(defaultextension=".csv", filetypes=[("CSV", "*.csv")], title="匯出異常 LOT 報表")
+        path = filedialog.asksaveasfilename(
+            defaultextension=".csv", filetypes=[("CSV", "*.csv")], title=self._t("export_lot_title")
+        )
         if not path:
             return
         try:
             with open(path, "w", newline="", encoding="utf-8-sig") as f:
                 writer = csv.writer(f)
-                writer.writerow(["日期", "區域", "批號", "異常內容", "處置狀況", "特記事項"])
+                writer.writerow(
+                    [
+                        self._t("date_label"),
+                        self._t("area_label"),
+                        self._t("lot_id_col"),
+                        self._t("lot_desc"),
+                        self._t("lot_status"),
+                        self._t("lot_notes"),
+                    ]
+                )
                 for row in rows:
                     writer.writerow(row)
-            messagebox.showinfo("匯出", "匯出成功")
+            messagebox.showinfo(self._t("export"), self._t("export_success"))
         except Exception as exc:
-            messagebox.showerror("匯出失敗", f"{exc}")
+            messagebox.showerror(self._t("export_fail"), f"{exc}")
 
     # Daily tab
     def _build_daily_tab(self) -> None:
@@ -735,12 +869,15 @@ class HandoverApp(tk.Tk):
         container.pack(fill="both", expand=True)
         canvas = tk.Canvas(container)
         vbar = ttk.Scrollbar(container, orient="vertical", command=canvas.yview)
+        hbar = ttk.Scrollbar(container, orient="horizontal", command=canvas.xview)
         self.daily_scroll = ttk.Frame(canvas)
         self.daily_scroll.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
-        canvas.create_window((0, 0), window=self.daily_scroll, anchor="nw")
-        canvas.configure(yscrollcommand=vbar.set)
-        canvas.pack(side="left", fill="both", expand=True)
+        self.daily_window_id = canvas.create_window((0, 0), window=self.daily_scroll, anchor="nw")
+        self.daily_canvas = canvas
+        canvas.configure(yscrollcommand=vbar.set, xscrollcommand=hbar.set)
+        hbar.pack(side="bottom", fill="x")
         vbar.pack(side="right", fill="y")
+        canvas.pack(side="left", fill="both", expand=True)
 
         info_frame = ttk.LabelFrame(self.daily_scroll, text=self._t("base_info"))
         info_frame.pack(fill="x", padx=10, pady=5)
@@ -892,7 +1029,7 @@ class HandoverApp(tk.Tk):
         try:
             report_date = datetime.strptime(self.date_var.get(), "%Y-%m-%d").date()
         except ValueError:
-            messagebox.showerror(self._t("error"), "日期格式需為 YYYY-MM-DD")
+            messagebox.showerror(self._t("error"), self._t("date_format_invalid"))
             return
         try:
             with SessionLocal() as db:
@@ -1110,7 +1247,7 @@ class HandoverApp(tk.Tk):
         try:
             report_date = datetime.strptime(self.date_var.get(), "%Y-%m-%d").date()
         except ValueError:
-            messagebox.showerror(self._t("error"), "日期格式需為 YYYY-MM-DD")
+            messagebox.showerror(self._t("error"), self._t("date_format_invalid"))
             return
 
         attendance = self._collect_attendance()
@@ -1147,11 +1284,12 @@ class HandoverApp(tk.Tk):
         try:
             with SessionLocal() as db:
                 is_update = False
-                if not messagebox.askyesno(self._t("confirm_upload"), "是否確認上傳全部欄位（含總結）？"):
+                if not messagebox.askyesno(self._t("confirm_upload"), self._t("confirm_upload_prompt")):
                     return
+                report = None
                 if self.current_report_id:
                     report = db.query(DailyReport).filter(DailyReport.id == self.current_report_id).first()
-                else:
+                if not report:
                     report = (
                         db.query(DailyReport)
                         .filter(
@@ -1161,6 +1299,9 @@ class HandoverApp(tk.Tk):
                         )
                         .first()
                     )
+                    if report and not messagebox.askyesno(self._t("duplicate_title"), self._t("duplicate_prompt")):
+                        messagebox.showinfo(self._t("info"), self._t("duplicate_skip"))
+                        return
                 if report:
                     is_update = True
                     report.date = report_date
@@ -1256,31 +1397,34 @@ class HandoverApp(tk.Tk):
         frame.pack(fill="both", expand=True, padx=10, pady=10)
 
         self.user_tree = ttk.Treeview(frame, columns=("id", "username", "role"), show="headings")
-        for col, text in zip(self.user_tree["columns"], ["ID", "帳號", "角色"]):
+        for col, text in zip(
+            self.user_tree["columns"], [self._t("id_label"), self._t("login_username"), self._t("role")]
+        ):
             self.user_tree.heading(col, text=text)
             self.user_tree.column(col, width=120)
         self.user_tree.pack(side="left", fill="both", expand=True)
         ttk.Scrollbar(frame, orient="vertical", command=self.user_tree.yview).pack(side="left", fill="y")
+        self.user_tree.bind("<Double-1>", lambda e: self._edit_user_dialog())
 
         form = ttk.Frame(frame)
         form.pack(side="right", fill="y", padx=10)
-        ttk.Label(form, text="帳號").grid(row=0, column=0, padx=5, pady=5)
-        ttk.Label(form, text="密碼").grid(row=1, column=0, padx=5, pady=5)
-        ttk.Label(form, text="角色").grid(row=2, column=0, padx=5, pady=5)
+        ttk.Label(form, text=self._t("login_username")).grid(row=0, column=0, padx=5, pady=5)
+        ttk.Label(form, text=self._t("password")).grid(row=1, column=0, padx=5, pady=5)
+        ttk.Label(form, text=self._t("role")).grid(row=2, column=0, padx=5, pady=5)
         self.new_user_var = tk.StringVar()
         self.new_pass_var = tk.StringVar()
         self.new_role_var = tk.StringVar(value="user")
         ttk.Entry(form, textvariable=self.new_user_var).grid(row=0, column=1, padx=5, pady=5)
         ttk.Entry(form, textvariable=self.new_pass_var, show="*").grid(row=1, column=1, padx=5, pady=5)
         ttk.Combobox(form, textvariable=self.new_role_var, values=["user", "admin"], state="readonly").grid(row=2, column=1, padx=5, pady=5)
-        ttk.Button(form, text="新增使用者", command=self._add_user).grid(row=3, column=0, columnspan=2, pady=10)
-        ttk.Button(form, text="重設密碼", command=self._reset_password).grid(row=4, column=0, columnspan=2, pady=5)
-        ttk.Button(form, text="刪除使用者", command=self._delete_user).grid(row=5, column=0, columnspan=2, pady=5)
+        ttk.Button(form, text=self._t("add_user"), command=self._add_user).grid(row=3, column=0, columnspan=2, pady=10)
+        ttk.Button(form, text=self._t("reset_pw"), command=self._reset_password).grid(row=4, column=0, columnspan=2, pady=5)
+        ttk.Button(form, text=self._t("delete_user"), command=self._delete_user).grid(row=5, column=0, columnspan=2, pady=5)
 
         self._refresh_users()
 
         # Option management (shift/area)
-        option_frame = ttk.LabelFrame(self.user_frame, text="班別與區域管理")
+        option_frame = ttk.LabelFrame(self.user_frame, text=self._t("option_title"))
         option_frame.pack(fill="both", expand=True, padx=10, pady=10)
         shift_frame = ttk.Frame(option_frame)
         shift_frame.pack(side="left", fill="both", expand=True, padx=5)
@@ -1288,42 +1432,44 @@ class HandoverApp(tk.Tk):
         area_frame.pack(side="left", fill="both", expand=True, padx=5)
 
         # Shift
-        ttk.Label(shift_frame, text="班別列表").pack(anchor="w")
+        ttk.Label(shift_frame, text=self._t("shift_list")).pack(anchor="w")
         self.shift_tree = ttk.Treeview(shift_frame, columns=("id", "name"), show="headings", height=6)
-        for col, text in zip(self.shift_tree["columns"], ["ID", "班別名稱"]):
+        for col, text in zip(self.shift_tree["columns"], [self._t("id_label"), self._t("shift_name")]):
             self.shift_tree.heading(col, text=text)
             self.shift_tree.column(col, width=80 if col == "id" else 150)
         self.shift_tree.pack(fill="both", expand=True)
         ttk.Scrollbar(shift_frame, orient="vertical", command=self.shift_tree.yview).pack(side="right", fill="y")
         self.shift_tree.bind("<<TreeviewSelect>>", lambda e: self._on_shift_select())
+        self.shift_tree.bind("<Double-1>", lambda e: self._edit_shift_dialog())
 
         shift_form = ttk.Frame(shift_frame)
         shift_form.pack(fill="x", pady=5)
-        ttk.Label(shift_form, text="名稱").grid(row=0, column=0, padx=5, pady=2)
+        ttk.Label(shift_form, text=self._t("name")).grid(row=0, column=0, padx=5, pady=2)
         self.shift_name_var = tk.StringVar()
         ttk.Entry(shift_form, textvariable=self.shift_name_var, width=18).grid(row=0, column=1, padx=5, pady=2)
-        ttk.Button(shift_form, text="新增", command=self._add_shift_option).grid(row=1, column=0, padx=5, pady=2)
-        ttk.Button(shift_form, text="修改", command=self._update_shift_option).grid(row=1, column=1, padx=5, pady=2)
-        ttk.Button(shift_form, text="刪除", command=self._delete_shift_option).grid(row=1, column=2, padx=5, pady=2)
+        ttk.Button(shift_form, text=self._t("add"), command=self._add_shift_option).grid(row=1, column=0, padx=5, pady=2)
+        ttk.Button(shift_form, text=self._t("update"), command=self._update_shift_option).grid(row=1, column=1, padx=5, pady=2)
+        ttk.Button(shift_form, text=self._t("delete"), command=self._delete_shift_option).grid(row=1, column=2, padx=5, pady=2)
 
         # Area
-        ttk.Label(area_frame, text="區域列表").pack(anchor="w")
+        ttk.Label(area_frame, text=self._t("area_list")).pack(anchor="w")
         self.area_tree = ttk.Treeview(area_frame, columns=("id", "name"), show="headings", height=6)
-        for col, text in zip(self.area_tree["columns"], ["ID", "區域名稱"]):
+        for col, text in zip(self.area_tree["columns"], [self._t("id_label"), self._t("area_name")]):
             self.area_tree.heading(col, text=text)
             self.area_tree.column(col, width=80 if col == "id" else 150)
         self.area_tree.pack(fill="both", expand=True)
         ttk.Scrollbar(area_frame, orient="vertical", command=self.area_tree.yview).pack(side="right", fill="y")
         self.area_tree.bind("<<TreeviewSelect>>", lambda e: self._on_area_select())
+        self.area_tree.bind("<Double-1>", lambda e: self._edit_area_dialog())
 
         area_form = ttk.Frame(area_frame)
         area_form.pack(fill="x", pady=5)
-        ttk.Label(area_form, text="名稱").grid(row=0, column=0, padx=5, pady=2)
+        ttk.Label(area_form, text=self._t("name")).grid(row=0, column=0, padx=5, pady=2)
         self.area_name_var = tk.StringVar()
         ttk.Entry(area_form, textvariable=self.area_name_var, width=18).grid(row=0, column=1, padx=5, pady=2)
-        ttk.Button(area_form, text="新增", command=self._add_area_option).grid(row=1, column=0, padx=5, pady=2)
-        ttk.Button(area_form, text="修改", command=self._update_area_option).grid(row=1, column=1, padx=5, pady=2)
-        ttk.Button(area_form, text="刪除", command=self._delete_area_option).grid(row=1, column=2, padx=5, pady=2)
+        ttk.Button(area_form, text=self._t("add"), command=self._add_area_option).grid(row=1, column=0, padx=5, pady=2)
+        ttk.Button(area_form, text=self._t("update"), command=self._update_area_option).grid(row=1, column=1, padx=5, pady=2)
+        ttk.Button(area_form, text=self._t("delete"), command=self._delete_area_option).grid(row=1, column=2, padx=5, pady=2)
 
         self._refresh_shift_options()
         self._refresh_area_options()
@@ -1403,6 +1549,61 @@ class HandoverApp(tk.Tk):
         except Exception as exc:
             messagebox.showerror("錯誤", f"刪除失敗：{exc}")
 
+    def _edit_user_dialog(self) -> None:
+        sel = self.user_tree.selection()
+        if not sel:
+            messagebox.showinfo(self._t("info"), self._t("err_select_row"))
+            return
+        vals = self.user_tree.item(sel[0], "values")
+        if len(vals) < 3:
+            return
+        user_id, username, role = vals
+        if hasattr(self, "_user_edit_win") and self._user_edit_win and self._user_edit_win.winfo_exists():
+            self._user_edit_win.destroy()
+        dlg = tk.Toplevel(self)
+        self._user_edit_win = dlg
+        dlg.title(self._t("dialog_edit_user"))
+        ttk.Label(dlg, text=self._t("login_username")).grid(row=0, column=0, padx=6, pady=6, sticky="e")
+        name_var = tk.StringVar(value=username)
+        ttk.Entry(dlg, textvariable=name_var).grid(row=0, column=1, padx=6, pady=6)
+        ttk.Label(dlg, text=self._t("password")).grid(row=1, column=0, padx=6, pady=6, sticky="e")
+        pw_var = tk.StringVar()
+        ttk.Entry(dlg, textvariable=pw_var, show="*").grid(row=1, column=1, padx=6, pady=6)
+        ttk.Label(dlg, text=self._t("role")).grid(row=2, column=0, padx=6, pady=6, sticky="e")
+        role_var = tk.StringVar(value=role)
+        ttk.Combobox(dlg, textvariable=role_var, values=["user", "admin"], state="readonly").grid(row=2, column=1, padx=6, pady=6)
+
+        def save() -> None:
+            new_name = name_var.get().strip()
+            new_pw = pw_var.get()
+            new_role = role_var.get()
+            if not new_name:
+                messagebox.showerror(self._t("error"), self._t("login_empty"))
+                return
+            try:
+                with SessionLocal() as db:
+                    exists = db.query(User).filter(User.username == new_name, User.id != user_id).first()
+                    if exists:
+                        messagebox.showerror(self._t("error"), self._t("login_wrong"))
+                        return
+                    user = db.query(User).filter(User.id == user_id).first()
+                    if not user:
+                        messagebox.showerror(self._t("error"), self._t("err_select_row"))
+                        return
+                    user.username = new_name
+                    user.role = new_role
+                    if new_pw:
+                        user.password_hash = hash_password(new_pw)
+                    db.commit()
+                self._refresh_users()
+                messagebox.showinfo(self._t("success"), self._t("submit_updated"))
+                dlg.destroy()
+            except Exception as exc:
+                messagebox.showerror(self._t("error"), f"{exc}")
+
+        dlg.protocol("WM_DELETE_WINDOW", lambda: (setattr(self, "_user_edit_win", None), dlg.destroy()))
+        ttk.Button(dlg, text=self._t("save_update"), command=save).grid(row=3, column=0, columnspan=2, pady=10)
+
     # Shift/Area option management
     def _refresh_shift_options(self) -> None:
         try:
@@ -1433,6 +1634,94 @@ class HandoverApp(tk.Tk):
             self.area_tree.insert("", "end", values=(opt.id, opt.name))
         self.area_name_var.set("")
         self._refresh_option_widgets()
+
+    def _edit_shift_dialog(self) -> None:
+        sel = self.shift_tree.selection()
+        if not sel:
+            messagebox.showinfo(self._t("info"), self._t("err_select_row"))
+            return
+        vals = self.shift_tree.item(sel[0], "values")
+        if len(vals) < 2:
+            return
+        opt_id, name = vals
+        if hasattr(self, "_shift_edit_win") and self._shift_edit_win and self._shift_edit_win.winfo_exists():
+            self._shift_edit_win.destroy()
+        dlg = tk.Toplevel(self)
+        self._shift_edit_win = dlg
+        dlg.title(self._t("dialog_edit_shift"))
+        ttk.Label(dlg, text=self._t("shift_name")).grid(row=0, column=0, padx=6, pady=6, sticky="e")
+        name_var = tk.StringVar(value=name)
+        ttk.Entry(dlg, textvariable=name_var).grid(row=0, column=1, padx=6, pady=6)
+
+        def save() -> None:
+            new_name = name_var.get().strip()
+            if not new_name:
+                messagebox.showerror(self._t("error"), self._t("name"))
+                return
+            try:
+                with SessionLocal() as db:
+                    option = db.query(ShiftOption).filter(ShiftOption.id == opt_id).first()
+                    if not option:
+                        messagebox.showerror(self._t("error"), self._t("err_select_row"))
+                        return
+                    existing = db.query(ShiftOption).filter(ShiftOption.name == new_name, ShiftOption.id != opt_id).first()
+                    if existing:
+                        messagebox.showerror(self._t("error"), self._t("duplicate_title"))
+                        return
+                    option.name = new_name
+                    db.commit()
+                self._refresh_shift_options()
+                messagebox.showinfo(self._t("success"), self._t("submit_updated"))
+                dlg.destroy()
+            except Exception as exc:
+                messagebox.showerror(self._t("error"), f"{exc}")
+
+        dlg.protocol("WM_DELETE_WINDOW", lambda: (setattr(self, "_shift_edit_win", None), dlg.destroy()))
+        ttk.Button(dlg, text=self._t("save_update"), command=save).grid(row=1, column=0, columnspan=2, pady=10)
+
+    def _edit_area_dialog(self) -> None:
+        sel = self.area_tree.selection()
+        if not sel:
+            messagebox.showinfo(self._t("info"), self._t("err_select_row"))
+            return
+        vals = self.area_tree.item(sel[0], "values")
+        if len(vals) < 2:
+            return
+        opt_id, name = vals
+        if hasattr(self, "_area_edit_win") and self._area_edit_win and self._area_edit_win.winfo_exists():
+            self._area_edit_win.destroy()
+        dlg = tk.Toplevel(self)
+        self._area_edit_win = dlg
+        dlg.title(self._t("dialog_edit_area"))
+        ttk.Label(dlg, text=self._t("area_name")).grid(row=0, column=0, padx=6, pady=6, sticky="e")
+        name_var = tk.StringVar(value=name)
+        ttk.Entry(dlg, textvariable=name_var).grid(row=0, column=1, padx=6, pady=6)
+
+        def save() -> None:
+            new_name = name_var.get().strip()
+            if not new_name:
+                messagebox.showerror(self._t("error"), self._t("name"))
+                return
+            try:
+                with SessionLocal() as db:
+                    option = db.query(AreaOption).filter(AreaOption.id == opt_id).first()
+                    if not option:
+                        messagebox.showerror(self._t("error"), self._t("err_select_row"))
+                        return
+                    existing = db.query(AreaOption).filter(AreaOption.name == new_name, AreaOption.id != opt_id).first()
+                    if existing:
+                        messagebox.showerror(self._t("error"), self._t("duplicate_title"))
+                        return
+                    option.name = new_name
+                    db.commit()
+                self._refresh_area_options()
+                messagebox.showinfo(self._t("success"), self._t("submit_updated"))
+                dlg.destroy()
+            except Exception as exc:
+                messagebox.showerror(self._t("error"), f"{exc}")
+
+        dlg.protocol("WM_DELETE_WINDOW", lambda: (setattr(self, "_area_edit_win", None), dlg.destroy()))
+        ttk.Button(dlg, text=self._t("save_update"), command=save).grid(row=1, column=0, columnspan=2, pady=10)
 
     def _on_shift_select(self) -> None:
         sel = self.shift_tree.selection()
