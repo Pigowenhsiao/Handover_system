@@ -29,10 +29,10 @@ from models import (
     init_db,
 )
 
-# 版本資訊
-VERSION = "v0.3.4-桌面多語"
+# Version info
+VERSION = "v0.3.4-Desktop multi lang version"
 
-# 語言資源（上一版正常的可讀文字）
+# Language resources (restored readable text)
 LANGS = {"ja": "日本語", "en": "English", "zh": "中文"}
 TEXTS: Dict[str, Dict[str, str]] = {
     "title": {"ja": "引き継ぎシステム（デスクトップ版）", "en": "Handover System (Desktop)", "zh": "交接系統（桌面版）"},
@@ -194,7 +194,7 @@ class HandoverApp(tk.Tk):
         self.area_options: List[str] = []
         self.current_report_id: Optional[int] = None
         self.att_selected_id: Optional[str] = None
-        self.debug_var = tk.StringVar(value="")  # 用於畫面上顯示偵錯資訊
+        self.debug_var = tk.StringVar(value="")  # used to display debug info on UI
         self.delay_pending_records: List[Dict[str, str]] = []
         self.summary_pending_records: List[Dict[str, str]] = []
         init_db()
@@ -276,7 +276,7 @@ class HandoverApp(tk.Tk):
         lang_combo.pack(side="left")
         lang_combo.bind("<<ComboboxSelected>>", self._switch_language)
 
-        # Debug 信息顯示
+        # Debug info display
         debug_frame = ttk.Frame(self)
         debug_frame.pack(fill="x")
         ttk.Label(debug_frame, text=f"{self._t('debug_label')}:").pack(side="left", padx=5)
@@ -417,7 +417,7 @@ class HandoverApp(tk.Tk):
             ttk.Label(frame, text=label).grid(row=idx, column=0, sticky="e", padx=6, pady=4)
             ttk.Label(frame, text=val, wraplength=420, justify="left").grid(row=idx, column=1, sticky="w", padx=6, pady=4)
 
-    # ================= 報表：出勤 =================
+    # ================= Reports: Attendance =================
     def _build_attendance_report_tab(self) -> None:
         control = ttk.Frame(self.att_tab)
         control.pack(fill="x", padx=10, pady=5)
@@ -519,17 +519,17 @@ class HandoverApp(tk.Tk):
             df["period"] = df["date"].apply(start_of_week)
         elif mode == "月":
             df["period"] = df["date"].apply(lambda d: d.strftime("%Y-%m"))
-        else:  # 自訂
+        else:  # custom
             df["period"] = df["date"]
 
         def calc_rate(scheduled: float, present: float) -> str:
             return "" if scheduled == 0 else round(present * 100 / scheduled, 1)
 
-        # 詳細資料
+        # Detailed rows
         df["period_str"] = df["period"].astype(str)
         df["rate"] = df.apply(lambda r: calc_rate(r["scheduled"], r["present"]), axis=1)
 
-        # 每個期間加總行（ALL/ALL）
+        # Sum row per period (ALL/ALL)
         total_rows = (
             df.groupby("period", as_index=False)[["scheduled", "present", "absent"]]
             .sum()
@@ -592,7 +592,7 @@ class HandoverApp(tk.Tk):
         except Exception as exc:
             messagebox.showerror(self._t("export_fail"), f"{exc}")
 
-    # ================= 報表：設備異常 =================
+    # ================= Reports: Equipment Issues =================
     def _build_equipment_report_tab(self) -> None:
         control = ttk.Frame(self.equip_tab)
         control.pack(fill="x", padx=10, pady=5)
@@ -759,7 +759,7 @@ class HandoverApp(tk.Tk):
         except Exception as exc:
             messagebox.showerror(self._t("export_fail"), f"{exc}")
 
-    # ================= 報表：異常 LOT =================
+    # ================= Reports: Abnormal LOT =================
     def _build_lot_report_tab(self) -> None:
         control = ttk.Frame(self.lot_tab)
         control.pack(fill="x", padx=10, pady=5)
@@ -822,7 +822,7 @@ class HandoverApp(tk.Tk):
         self.lot_chart_frame = ttk.LabelFrame(self.lot_tab, text=self._t("lot_chart_title"))
         self.lot_chart_frame.pack(fill="both", expand=True, padx=10, pady=5)
 
-    # ================= 報表：Delay List =================
+    # ================= Reports: Delay List =================
     def _build_delay_tab(self) -> None:
         btn_frame = ttk.Frame(self.delay_tab)
         btn_frame.pack(fill="x", padx=10, pady=5)
@@ -1011,7 +1011,7 @@ class HandoverApp(tk.Tk):
 
         records: List[Dict[str, str]] = []
         for _, row in df.iterrows():
-            # 取檔案日期
+            # Use date value from file
             raw_date = row.get(col_map["date"]) if col_map["date"] else None
             parsed_date = pd.to_datetime(raw_date, errors="coerce").date() if pd.notna(raw_date) else None
             if not parsed_date:
@@ -1068,7 +1068,7 @@ class HandoverApp(tk.Tk):
         except Exception as exc:
             messagebox.showerror(self._t("error"), f"{exc}")
 
-    # ================= 報表：Summary Actual =================
+    # ================= Reports: Summary Actual =================
     def _build_summary_actual_tab(self) -> None:
         control = ttk.Frame(self.summary_actual_tab)
         control.pack(fill="x", padx=10, pady=5)
@@ -1629,7 +1629,7 @@ class HandoverApp(tk.Tk):
 
     # Daily tab
     def _build_daily_tab(self) -> None:
-        # 可捲動容器，避免小螢幕時按鈕被擠出畫面
+        # Scrollable container to prevent buttons being clipped on small screens
         container = ttk.Frame(self.daily_frame)
         container.pack(fill="both", expand=True)
         canvas = tk.Canvas(container)
@@ -1755,7 +1755,7 @@ class HandoverApp(tk.Tk):
         for i in range(3):
             summary_frame.columnconfigure(i, weight=1)
 
-        # Actions (固定在畫面底部，便於找到)
+        # Actions (fixed near bottom for easy access)
         action_frame = ttk.LabelFrame(self.daily_scroll, text=self._t("actions_section"))
         action_frame.pack(fill="x", padx=10, pady=10)
         buttons = [
@@ -1932,7 +1932,7 @@ class HandoverApp(tk.Tk):
             return focus
         children = self.att_tree_daily.get_children()
         if children:
-            # auto-select first row to reduce空選擇狀況
+        # auto-select first row to reduce empty selection cases
             self.att_tree_daily.selection_set(children[0])
             self.att_selected_id = children[0]
             return children[0]
