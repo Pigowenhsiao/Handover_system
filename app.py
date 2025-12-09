@@ -1310,7 +1310,6 @@ class HandoverApp(tk.Tk):
         )
         ttk.Scrollbar(self.summary_actual_tab, orient="vertical", command=self.summary_tree.yview).pack(side="right", fill="y")
         self.summary_tree.configure(yscrollcommand=self.summary_tree.yview)
-        self._load_summary_actual()
 
     def _load_summary_actual(self) -> None:
         self._clear_tree(self.summary_tree)
