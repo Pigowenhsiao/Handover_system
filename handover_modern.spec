@@ -14,8 +14,11 @@ openpyxl_datas, openpyxl_binaries, openpyxl_hidden = collect_all("openpyxl")
 datas = [
     (str(project_root / "frontend" / "public" / "locales"), "frontend/public/locales"),
     (str(project_root / "data" / "master_data.json"), "data"),
-    (str(project_root / "handover_settings.json"), "."),
 ]
+
+settings_path = project_root / "handover_settings.json"
+if settings_path.exists():
+    datas.append((str(settings_path), "."))
 
 datas += matplotlib_datas + pandas_datas + openpyxl_datas
 binaries = matplotlib_binaries + pandas_binaries + openpyxl_binaries

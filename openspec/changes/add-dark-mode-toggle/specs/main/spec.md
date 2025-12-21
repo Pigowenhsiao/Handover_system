@@ -9,3 +9,14 @@
 #### Scenario: Switch to light theme
 - **WHEN** 使用者再次點擊主題切換按鈕切換回明亮模式
 - **THEN** 介面樣式即時回復為明亮主題
+
+### Requirement: Theme preference persistence
+系統 SHALL 儲存使用者上次選擇的主題並在下次啟動時套用該主題（預設為明亮模式）。
+
+#### Scenario: Persist selected theme
+- **WHEN** 使用者切換主題
+- **THEN** 系統將主題偏好寫入本機設定檔
+
+#### Scenario: Restore theme on startup
+- **WHEN** 系統啟動且設定檔中存在主題偏好
+- **THEN** 介面以該主題初始化

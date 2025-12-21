@@ -83,8 +83,8 @@ class ModernMainFrame:
         self._global_i18n = []
         self._page_i18n = []
         self._nav_items = []
-        self.theme_mode = "light"
-        self.COLORS = dict(self.LIGHT_COLORS)
+        self.theme_mode = self._load_theme_mode()
+        self.COLORS = dict(self.DARK_COLORS if self.theme_mode == "dark" else self.LIGHT_COLORS)
         ModernMainFrame.COLORS = self.COLORS
         self._text_widgets = []
         self._canvas_widgets = []
@@ -159,6 +159,36 @@ class ModernMainFrame:
     def _clear_tree(self, tree):
         for item in tree.get_children():
             tree.delete(item)
+
+    def _load_settings_data(self):
+        path = self._settings_path()
+        if not os.path.exists(path):
+            return {}
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            return data if isinstance(data, dict) else {}
+        except Exception:
+            return {}
+
+    def _save_settings_data(self, data):
+        path = self._settings_path()
+        try:
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            return True
+        except Exception:
+            return False
+
+    def _load_theme_mode(self):
+        data = self._load_settings_data()
+        theme = data.get("theme")
+        return theme if theme in ("light", "dark") else "light"
+
+    def _persist_theme_setting(self):
+        data = self._load_settings_data()
+        data["theme"] = self.theme_mode
+        self._save_settings_data(data)
 
     def _register_text_widget(self, widget):
         self._text_widgets.append(widget)
@@ -237,6 +267,7 @@ class ModernMainFrame:
         if theme_mode not in ("light", "dark"):
             return
         self.theme_mode = theme_mode
+        self._persist_theme_setting()
         self.COLORS = dict(self.DARK_COLORS if theme_mode == "dark" else self.LIGHT_COLORS)
         ModernMainFrame.COLORS = self.COLORS
         self.setup_modern_styles()
@@ -2296,18 +2327,11 @@ class ModernMainFrame:
         return os.path.join(root_dir, "handover_settings.json")
 
     def _load_system_settings(self):
-        path = self._settings_path()
-        if not os.path.exists(path):
-            return
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-            if "auto_backup" in data:
-                self.auto_backup_var.set(bool(data["auto_backup"]))
-            if "backup_interval_days" in data:
-                self.backup_interval_var.set(str(data["backup_interval_days"]))
-        except Exception:
-            return
+        data = self._load_settings_data()
+        if "auto_backup" in data:
+            self.auto_backup_var.set(bool(data["auto_backup"]))
+        if "backup_interval_days" in data:
+            self.backup_interval_var.set(str(data["backup_interval_days"]))
 
     def save_system_settings(self):
         try:
@@ -2329,8 +2353,10 @@ class ModernMainFrame:
             "backup_interval_days": interval,
         }
         try:
-            with open(self._settings_path(), "w", encoding="utf-8") as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
+            merged = self._load_settings_data()
+            merged.update(data)
+            if not self._save_settings_data(merged):
+                raise OSError("settings write failed")
             self._set_status("settings.saved", "✅ 設定已儲存")
             messagebox.showinfo(
                 self._t("common.success", "成功"),
