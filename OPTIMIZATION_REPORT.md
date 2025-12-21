@@ -420,7 +420,7 @@ handover_system/
 │   │       ├── attendance_section_optimized.py  # ✅ 優化出勤組件
 │   │       └── admin_section.py     # ✅ 整合密碼重設
 │   └── i18n/
-│       └── language_manager.py      # 語言管理
+│       └── frontend/main.py         # 語言管理
 ├── tests/                            # 測試
 │   └── test_modern_ui.py           # ✅ UI 測試
 ├── start_modern_ui.py              # ✅ 現代化啟動器

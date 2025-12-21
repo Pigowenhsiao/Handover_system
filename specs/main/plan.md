@@ -14,7 +14,6 @@
 ```
 handover_system/
 ├── run_modern_system.py          # 現代化介面啟動器
-├── app.py                        # 舊版介面入口（已停止更新）
 ├── models.py                     # SQLAlchemy models
 ├── auth.py                       # 密碼雜湊/驗證
 ├── frontend/

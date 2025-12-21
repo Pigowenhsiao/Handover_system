@@ -1,9 +1,11 @@
 # -*- mode: python ; coding: utf-8 -*-
 
 from pathlib import Path
+import sys
 from PyInstaller.utils.hooks import collect_all
 
-project_root = Path(__file__).parent
+spec_path = Path(globals().get("SPEC", sys.argv[0])).resolve()
+project_root = spec_path.parent
 
 matplotlib_datas, matplotlib_binaries, matplotlib_hidden = collect_all("matplotlib")
 pandas_datas, pandas_binaries, pandas_hidden = collect_all("pandas")

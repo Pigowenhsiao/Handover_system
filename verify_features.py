@@ -12,10 +12,10 @@ def check_core_components():
     print("檢查核心組件...")
 
     core_files = [
-        "app.py",
+        "run_modern_system.py",
+        "start_modern_ui.py",
         "auth.py",
         "models.py",
-        "language_manager.py",
         "requirements.txt",
     ]
 
@@ -32,13 +32,14 @@ def check_frontend_components():
 
     frontend_dir = "frontend"
     if not os.path.exists(frontend_dir):
-        print("ℹ 前端目錄不存在（僅使用 app.py）")
+        print("✗ 前端目錄不存在（無法啟動現代化介面）")
         return
 
     frontend_files = [
         "frontend/main.py",
         "frontend/src/components/language_selector.py",
-        "frontend/src/components/attendance_section.py",
+        "frontend/src/components/attendance_section_optimized.py",
+        "frontend/src/components/modern_main_frame.py",
     ]
 
     for frontend_file in frontend_files:

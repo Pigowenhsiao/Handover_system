@@ -21,7 +21,6 @@
 
 ### Entry Point
 - 現代化介面啟動入口為 `run_modern_system.py`（建議使用）。
-- `app.py` 為舊版介面入口（已停止更新，僅作為歷史檔案）。
 
 ### Architecture Patterns
 - 單機桌面應用：Tkinter GUI 與資料庫均在本機執行。

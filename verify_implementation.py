@@ -14,10 +14,11 @@ sys.path.insert(0, str(root_dir))
 print("檢查核心模塊...")
 
 core_modules = [
-    ("app.py", "主程式"),
+    ("run_modern_system.py", "現代化啟動器"),
+    ("start_modern_ui.py", "快速啟動器"),
     ("auth.py", "密碼雜湊/驗證"),
     ("models.py", "資料模型"),
-    ("language_manager.py", "語言資源管理"),
+    ("frontend/main.py", "語言資源管理"),
 ]
 
 for module_path, label in core_modules:
@@ -30,10 +31,10 @@ for module_path, label in core_modules:
 print("\n檢查前端模塊...")
 
 try:
-    from frontend.i18n.language_manager import frontend_lang_manager
-    print("✓ 前端語言管理器導入成功")
+    from frontend.main import LanguageManager
+    print("✓ 語言管理器導入成功")
 except ImportError as e:
-    print(f"✗ 前端語言管理器導入失敗: {e}")
+    print(f"✗ 語言管理器導入失敗: {e}")
 
 try:
     from frontend.src.components.language_selector import LanguageSelector
@@ -43,7 +44,7 @@ except ImportError as e:
 
 # 檢查前端出勤記錄組件
 try:
-    from frontend.src.components.attendance_section import AttendanceSection
+    from frontend.src.components.attendance_section_optimized import AttendanceSectionOptimized
     print("✓ 出勤記錄組件導入成功")
 except ImportError as e:
     print(f"✗ 出勤記錄組件導入失敗: {e}")

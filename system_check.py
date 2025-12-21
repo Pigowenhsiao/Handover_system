@@ -58,13 +58,12 @@ def test_language_manager():
     """測試語言管理器功能"""
     print("\n測試語言管理器功能...")
     try:
-        from language_manager import LanguageResourceManager
-        lang_manager = LanguageResourceManager()
-        
-        # 測試翻譯功能
-        current_lang = "ja"
-        test_key = "common.title"
-        translated = lang_manager.get_resource(current_lang, test_key)
+        from frontend.main import LanguageManager
+        locales_dir = root_dir / "frontend" / "public" / "locales"
+        lang_manager = LanguageManager(str(locales_dir))
+
+        test_key = "header.title"
+        translated = lang_manager.get_text(test_key, "電子交接系統")
         print(f"✓ 翻譯測試 ('{test_key}' → '{translated}')")
         
         return True
@@ -117,7 +116,7 @@ def main():
     
     if overall_success:
         print("\n系統已準備就緒，可以執行以下命令啟動應用程式:")
-        print("  python app.py")
+        print("  python run_modern_system.py")
     else:
         print("\n發現問題，請先解決後再嘗試啟動應用程式")
     
