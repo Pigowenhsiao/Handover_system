@@ -282,6 +282,8 @@ class AttendanceSectionOptimized:
 
     def update_language(self):
         """更新語言文字"""
+        if not self._widget_alive(self.main_frame):
+            return
         self.info_label.config(
             text=self.lang_manager.get_text(
                 "attendance.info",
@@ -306,6 +308,12 @@ class AttendanceSectionOptimized:
         self.total_absent_title.config(text=self.lang_manager.get_text("attendance.total_absent", "總欠勤:"))
         self.overall_rate_title.config(text=self.lang_manager.get_text("attendance.overall_rate", "整體出勤率:"))
         self.update_status_indicator()
+
+    def _widget_alive(self, widget):
+        try:
+            return widget is not None and widget.winfo_exists()
+        except Exception:
+            return False
     
     def on_data_change(self, staff_type):
         """當數據變更時調用"""
@@ -505,9 +513,12 @@ class AttendanceSectionOptimized:
             if not self.app_instance.ensure_report_context():
                 return
         if self.validate_attendance_data():
+            if hasattr(self.app_instance, "save_attendance_entries"):
+                if not self.app_instance.save_attendance_entries(self.get_attendance_data()):
+                    return
             self.data_modified = False
             self.update_status_indicator()
-            
+
             messagebox.showinfo(
                 self.lang_manager.get_text("common.success", "成功"),
                 self.lang_manager.get_text("attendance.saved", "出勤數據已儲存")

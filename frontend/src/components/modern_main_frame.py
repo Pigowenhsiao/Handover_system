@@ -5,16 +5,33 @@
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 from datetime import datetime
+from collections import defaultdict
+import calendar
 import json
 import os
 import pandas as pd
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
+from matplotlib import rcParams
 
 # 導入現有組件
 from frontend.src.components.language_selector import LanguageSelector
 from frontend.main import LanguageManager
-from frontend.src.components.admin_section import UserManagementSection, TranslationManagementSection
+from frontend.src.components.admin_section import UserManagementSection, TranslationManagementSection, MasterDataSection
 from frontend.src.components.attendance_section_optimized import AttendanceSectionOptimized
-from models import DelayEntry, SummaryActualEntry, SessionLocal
+from auth import verify_password
+from models import (
+    DelayEntry,
+    SummaryActualEntry,
+    SessionLocal,
+    User,
+    DailyReport,
+    AttendanceEntry,
+    EquipmentLog,
+    LotLog,
+    ShiftOption,
+    AreaOption,
+)
 
 
 class ModernMainFrame:
@@ -49,6 +66,10 @@ class ModernMainFrame:
         self._page_i18n = []
         self._nav_items = []
         self.report_context = {"date": "", "shift": "", "area": ""}
+        self.saved_context = {"date": "", "shift": "", "area": ""}
+        self.report_is_saved = False
+        self.active_report_id = None
+        self.nav_locked = True
         self.layout = {
             "page_pad": 24,
             "section_pad": 20,
@@ -58,15 +79,20 @@ class ModernMainFrame:
         }
         self.delay_pending_records = []
         self.summary_pending_records = []
+        self.summary_dashboard_data = None
+        self._cjk_font_ready = False
+        self.shift_options = ["Day", "Night"]
+        self.area_options = ["etching_D", "etching_E", "litho", "thin_film"]
         
         # 配置現代化樣式
         self.setup_modern_styles()
         
         # 創建界面
+        self.setup_login_ui()
         self.setup_ui()
-        
-        # 初始化第一個頁面
-        self.show_page('daily_report')
+
+        # 先顯示登入畫面
+        self._show_login_screen()
 
     def _t(self, key, default):
         return self.lang_manager.get_text(key, default)
@@ -204,6 +230,50 @@ class ModernMainFrame:
         
         # 分隔線樣式
         style.configure('Line.TSeparator', background=colors['divider'])
+
+    def setup_login_ui(self):
+        """設置登入畫面"""
+        self.login_container = ttk.Frame(self.parent, style='Modern.TFrame')
+
+        wrapper = ttk.Frame(self.login_container, style='Modern.TFrame')
+        wrapper.pack(fill='both', expand=True)
+
+        card = ttk.Frame(wrapper, style='Card.TFrame')
+        card.place(relx=0.5, rely=0.5, anchor='center')
+
+        title_label = ttk.Label(card, style='CardTitle.TLabel')
+        self._register_text(title_label, "login.title", "登入系統", scope="global")
+        title_label.grid(row=0, column=0, columnspan=2, sticky='w', padx=30, pady=(25, 5))
+
+        subtitle_label = ttk.Label(card, style='Subtitle.TLabel')
+        self._register_text(subtitle_label, "login.subtitle", "請輸入帳號與密碼", scope="global")
+        subtitle_label.grid(row=1, column=0, columnspan=2, sticky='w', padx=30, pady=(0, 20))
+
+        username_label = ttk.Label(card, font=('Segoe UI', 10))
+        self._register_text(username_label, "common.username", "使用者名稱", scope="global")
+        username_label.grid(row=2, column=0, sticky='w', padx=30, pady=(0, 10))
+        self.login_username_var = tk.StringVar()
+        self.login_username_entry = ttk.Entry(card, textvariable=self.login_username_var, style='Modern.TEntry', width=28)
+        self.login_username_entry.grid(row=2, column=1, sticky='ew', padx=(10, 30), pady=(0, 10))
+
+        password_label = ttk.Label(card, font=('Segoe UI', 10))
+        self._register_text(password_label, "common.password", "密碼", scope="global")
+        password_label.grid(row=3, column=0, sticky='w', padx=30, pady=(0, 10))
+        self.login_password_var = tk.StringVar()
+        self.login_password_entry = ttk.Entry(card, textvariable=self.login_password_var, show="*", style='Modern.TEntry', width=28)
+        self.login_password_entry.grid(row=3, column=1, sticky='ew', padx=(10, 30), pady=(0, 10))
+        self.login_password_entry.bind("<Return>", lambda event: self.attempt_login())
+
+        lang_frame = ttk.Frame(card, style='Card.TFrame')
+        lang_frame.grid(row=4, column=0, columnspan=2, sticky='w', padx=30, pady=(5, 15))
+        self.login_lang_selector = LanguageSelector(lang_frame, self.lang_manager, callback=self.on_language_changed)
+        self.login_lang_selector.get_widget().pack(side='left')
+
+        self.login_button = ttk.Button(card, style='Primary.TButton', command=self.attempt_login)
+        self._register_text(self.login_button, "header.login", "登入", scope="global")
+        self.login_button.grid(row=5, column=0, columnspan=2, sticky='ew', padx=30, pady=(0, 25))
+
+        card.columnconfigure(1, weight=1)
     
     def setup_ui(self):
         """設置現代化界面"""
@@ -223,6 +293,17 @@ class ModernMainFrame:
         
         # 創建狀態欄
         self.create_status_bar()
+
+    def _show_login_screen(self):
+        if hasattr(self, "main_container"):
+            self.main_container.pack_forget()
+        self.login_container.pack(fill='both', expand=True)
+        if hasattr(self, "login_username_entry"):
+            self.login_username_entry.focus_set()
+
+    def _show_main_ui(self):
+        self.login_container.pack_forget()
+        self.main_container.pack(fill='both', expand=True)
     
     def create_top_toolbar(self):
         """創建頂部工具欄"""
@@ -350,6 +431,7 @@ class ModernMainFrame:
             command=self.toggle_sidebar
         )
         self._position_sidebar_toggle()
+        self._set_navigation_locked(self.nav_locked)
     
     def create_main_content(self):
         """創建主內容區域"""
@@ -420,6 +502,12 @@ class ModernMainFrame:
     
     def show_page(self, page_id):
         """顯示指定頁面"""
+        if self.nav_locked and page_id != 'daily_report':
+            messagebox.showwarning(
+                self._t("context.basicInfoRequiredTitle", "尚未儲存基本資訊"),
+                self._t("context.basicInfoRequiredBody", "請先在日報表儲存日期、班別、區域後再使用其他功能。")
+            )
+            return
         # 清除現有內容
         for widget in self.page_content.winfo_children():
             widget.destroy()
@@ -474,20 +562,18 @@ class ModernMainFrame:
         form_frame.pack(fill='x', padx=self.layout["card_pad"], pady=self.layout["card_pad"])
         
         # 日期
-        self.create_form_row(
-            form_frame, 0,
-            "fields.date", "📅 日期:",
-            'date',
-            widget_type='entry',
-            var_name='date_var',
-            default=datetime.now().strftime("%Y-%m-%d")
-        )
+        date_label = ttk.Label(form_frame, font=('Segoe UI', 10))
+        self._register_text(date_label, "fields.date", "📅 日期:", scope="page")
+        date_label.grid(row=0, column=0, sticky='w', padx=0, pady=self.layout["row_pad"])
+        self.date_var = tk.StringVar(value=datetime.now().strftime("%Y-%m-%d"))
+        date_frame = ttk.Frame(form_frame, style='Card.TFrame')
+        date_frame.grid(row=0, column=1, sticky='ew', padx=(self.layout["field_gap"], 0), pady=self.layout["row_pad"])
+        self._create_date_picker(date_frame, self.date_var, width=18)
         
+        self._load_shift_area_options()
+
         # 班別
-        shift_values = [
-            self._t("shift.day", "Day"),
-            self._t("shift.night", "Night"),
-        ]
+        shift_values = self._build_shift_display_options()
         self.shift_values = shift_values
         self.shift_combo = self.create_form_row(
             form_frame, 1,
@@ -496,19 +582,25 @@ class ModernMainFrame:
             widget_type='combo',
             var_name='shift_var',
             values=shift_values,
-            default=shift_values[0]
+            default=shift_values[0] if shift_values else ""
         )
         
         # 區域
-        self.create_form_row(
+        self.area_combo = self.create_form_row(
             form_frame, 2,
             "fields.area", "🏭 區域:",
             'area',
             widget_type='combo',
             var_name='area_var',
-            values=["etching_D", "etching_E", "litho", "thin_film"],
-            default="etching_D"
+            values=self.area_options,
+            default=self.area_options[0] if self.area_options else ""
         )
+
+        basic_action_frame = ttk.Frame(form_frame, style='Card.TFrame')
+        basic_action_frame.grid(row=3, column=0, columnspan=2, sticky='w', pady=(10, 0))
+        basic_save_btn = ttk.Button(basic_action_frame, style='Primary.TButton', command=self.save_basic_info)
+        self._register_text(basic_save_btn, "actions.saveBasicInfo", "💾 儲存基本資訊", scope="page")
+        basic_save_btn.pack(side='left')
 
         self.date_var.trace_add("write", lambda *_: self._sync_report_context_from_form())
         self.shift_var.trace_add("write", lambda *_: self._sync_report_context_from_form())
@@ -598,6 +690,149 @@ class ModernMainFrame:
             widget.grid(row=row, column=1, sticky='ew', padx=(self.layout["field_gap"], 0), pady=self.layout["row_pad"])
         parent.columnconfigure(1, weight=1)
         return widget
+
+    def _load_shift_area_options(self):
+        shift_defaults = ["Day", "Night"]
+        area_defaults = ["etching_D", "etching_E", "litho", "thin_film"]
+        try:
+            with SessionLocal() as db:
+                shifts = [opt.name for opt in db.query(ShiftOption).order_by(ShiftOption.id).all()]
+                areas = [opt.name for opt in db.query(AreaOption).order_by(AreaOption.id).all()]
+            self.shift_options = shifts or shift_defaults
+            self.area_options = areas or area_defaults
+        except Exception:
+            self.shift_options = shift_defaults
+            self.area_options = area_defaults
+
+    def _build_shift_display_options(self):
+        day_label = self._t("shift.day", "Day")
+        night_label = self._t("shift.night", "Night")
+        code_map = {}
+        display_map = {}
+        display_values = []
+        for code in self.shift_options:
+            if code == "Day":
+                display = day_label
+            elif code == "Night":
+                display = night_label
+            else:
+                display = code
+            code_map[display] = code
+            display_map[code] = display
+            display_values.append(display)
+        self.shift_code_map = code_map
+        self.shift_display_map = display_map
+        return display_values
+
+    def _create_date_picker(self, parent, var, width=16):
+        entry = ttk.Entry(parent, textvariable=var, style='Modern.TEntry', width=width, state='readonly')
+        entry.pack(side='left', fill='x', expand=True)
+        button = ttk.Button(parent, text="📅", width=3, command=lambda: self._open_calendar_popup(var))
+        button.pack(side='left', padx=(6, 0))
+        entry.bind("<Button-1>", lambda _e: self._open_calendar_popup(var))
+        return entry, button
+
+    def _open_calendar_popup(self, target_var):
+        if hasattr(self, "_calendar_popup") and self._calendar_popup is not None:
+            if self._calendar_popup.winfo_exists():
+                self._calendar_popup.destroy()
+            self._calendar_popup = None
+
+        current = target_var.get().strip()
+        today = datetime.now().date()
+        try:
+            base_date = datetime.strptime(current, "%Y-%m-%d").date() if current else today
+        except ValueError:
+            base_date = today
+
+        popup = tk.Toplevel(self.parent)
+        popup.title(self._t("common.selectDate", "選擇日期"))
+        popup.resizable(False, False)
+        popup.transient(self.parent)
+        self._calendar_popup = popup
+
+        header = ttk.Frame(popup, padding=(10, 10, 10, 0))
+        header.pack(fill='x')
+
+        current_year = tk.IntVar(value=base_date.year)
+        current_month = tk.IntVar(value=base_date.month)
+
+        month_label = ttk.Label(header, font=('Segoe UI', 11, 'bold'))
+        month_label.pack(side='left', padx=(10, 0))
+
+        def update_title():
+            year = current_year.get()
+            month = current_month.get()
+            month_label.config(text=f"{year}-{month:02d}")
+
+        def change_month(delta):
+            year = current_year.get()
+            month = current_month.get() + delta
+            if month < 1:
+                month = 12
+                year -= 1
+            elif month > 12:
+                month = 1
+                year += 1
+            current_year.set(year)
+            current_month.set(month)
+            render_days()
+
+        prev_btn = ttk.Button(header, text="◀", width=3, command=lambda: change_month(-1))
+        prev_btn.pack(side='left')
+        next_btn = ttk.Button(header, text="▶", width=3, command=lambda: change_month(1))
+        next_btn.pack(side='left', padx=(5, 0))
+
+        body = ttk.Frame(popup, padding=10)
+        body.pack(fill='both', expand=True)
+
+        weekdays = [
+            self._t("calendar.mon", "一"),
+            self._t("calendar.tue", "二"),
+            self._t("calendar.wed", "三"),
+            self._t("calendar.thu", "四"),
+            self._t("calendar.fri", "五"),
+            self._t("calendar.sat", "六"),
+            self._t("calendar.sun", "日"),
+        ]
+
+        for idx, day_label in enumerate(weekdays):
+            ttk.Label(body, text=day_label).grid(row=0, column=idx, padx=4, pady=2)
+
+        days_frame = ttk.Frame(body)
+        days_frame.grid(row=1, column=0, columnspan=7)
+
+        def render_days():
+            for child in days_frame.winfo_children():
+                child.destroy()
+            update_title()
+            year = current_year.get()
+            month = current_month.get()
+            cal = calendar.Calendar(firstweekday=0)
+            weeks = cal.monthdayscalendar(year, month)
+            for r, week in enumerate(weeks):
+                for c, day in enumerate(week):
+                    if day == 0:
+                        ttk.Label(days_frame, text=" ").grid(row=r, column=c, padx=2, pady=2)
+                        continue
+
+                    def select_date(d=day):
+                        target_var.set(f"{year}-{month:02d}-{d:02d}")
+                        if popup.winfo_exists():
+                            popup.destroy()
+                        self._calendar_popup = None
+
+                    btn = ttk.Button(days_frame, text=str(day), width=3, command=select_date)
+                    btn.grid(row=r, column=c, padx=2, pady=2)
+
+        render_days()
+
+        def on_close():
+            if popup.winfo_exists():
+                popup.destroy()
+            self._calendar_popup = None
+
+        popup.protocol("WM_DELETE_WINDOW", on_close)
     
     def create_attendance_page(self):
         """創建出勤記錄頁面"""
@@ -607,6 +842,8 @@ class ModernMainFrame:
         # 使用優化版出勤組件
         self.attendance_section = AttendanceSectionOptimized(self.page_content, self.lang_manager, self)
         self.attendance_section.get_widget().pack(fill='both', expand=True)
+        if self.active_report_id:
+            self._load_attendance_entries()
     
     def create_equipment_page(self):
         """創建設備異常頁面"""
@@ -746,53 +983,420 @@ class ModernMainFrame:
     
     def create_summary_page(self):
         """創建總結頁面"""
-        self._register_text(self.page_title, "pages.summary.title", "總結", scope="page")
-        self._register_text(self.page_subtitle, "pages.summary.subtitle", "記錄每日總結與分析", scope="page")
-        
-        card = self.create_card(self.page_content, '📊', "cards.workSummary", "工作總結")
-        card.pack(fill='both', expand=True)
-        
-        # Key Issues
-        issues_label = ttk.Label(card, style='CardTitle.TLabel')
-        self._register_text(issues_label, "summary.issues", "⚠️ Key Issues (關鍵問題):", scope="page")
-        issues_label.pack(anchor='w', padx=self.layout["card_pad"], pady=(20, 5))
-        self.summary_key_issues_text = tk.Text(card, height=6, font=('Segoe UI', 10), relief='flat', bg=self.COLORS['surface'], wrap="word")
-        self.summary_key_issues_text.pack(fill='x', padx=self.layout["card_pad"], pady=(0, 15))
-        
-        # Countermeasures
-        counter_label = ttk.Label(card, style='CardTitle.TLabel')
-        self._register_text(counter_label, "summary.countermeasures", "✅ Countermeasures (對策):", scope="page")
-        counter_label.pack(anchor='w', padx=self.layout["card_pad"], pady=(15, 5))
-        self.summary_countermeasures_text = tk.Text(card, height=6, font=('Segoe UI', 10), relief='flat', bg=self.COLORS['surface'], wrap="word")
-        self.summary_countermeasures_text.pack(fill='x', padx=self.layout["card_pad"], pady=(0, 20))
-        
-        # 統計資訊卡片
-        stats_card = self.create_card(self.page_content, '📈', "cards.statsToday", "今日統計")
-        stats_card.pack(fill='x')
-        
-        stats_frame = ttk.Frame(stats_card, style='Card.TFrame')
-        stats_frame.pack(fill='x', padx=20, pady=20)
-        
-        # 今日報表數、出勤率等統計
-        stat_items = [
-            ('📋', "stats.dailyReports", "今日報表", '5', "stats.unitReports", "份"),
-            ('👥', "stats.avgAttendance", "平均出勤率", '92.5', "stats.unitPercent", '%'),
-            ('⚠️', "stats.equipmentIssues", "設備異常", '3', "stats.unitItems", '件'),
-            ('📦', "stats.lotIssues", "批次異常", '1', "stats.unitItems", '件')
+        self._register_text(self.page_title, "pages.summary.title", "出勤統計", scope="page")
+        self._register_text(self.page_subtitle, "pages.summary.subtitle", "依日期區間彙整出勤資訊", scope="page")
+
+        self._summary_scroll_setup()
+        control_card = self.create_card(self.summary_scroll_frame, '👥', "cards.attendanceSummary", "出勤統計")
+        control_card.pack(fill='x', pady=(0, 20))
+
+        control_frame = ttk.Frame(control_card, style='Card.TFrame')
+        control_frame.pack(fill='x', padx=self.layout["card_pad"], pady=self.layout["card_pad"])
+
+        start_label = ttk.Label(control_frame, font=('Segoe UI', 10))
+        self._register_text(start_label, "summaryDashboard.startDate", "統計開始日期", scope="page")
+        start_label.grid(row=0, column=0, sticky='w', pady=self.layout["row_pad"])
+        self.summary_dash_start_var = tk.StringVar()
+        start_frame = ttk.Frame(control_frame, style='Card.TFrame')
+        start_frame.grid(row=0, column=1, sticky='w', padx=(self.layout["field_gap"], 0), pady=self.layout["row_pad"])
+        self._create_date_picker(start_frame, self.summary_dash_start_var, width=14)
+
+        end_label = ttk.Label(control_frame, font=('Segoe UI', 10))
+        self._register_text(end_label, "summaryDashboard.endDate", "統計結束日期", scope="page")
+        end_label.grid(row=0, column=2, sticky='w', padx=(20, 0), pady=self.layout["row_pad"])
+        self.summary_dash_end_var = tk.StringVar()
+        end_frame = ttk.Frame(control_frame, style='Card.TFrame')
+        end_frame.grid(row=0, column=3, sticky='w', padx=(self.layout["field_gap"], 0), pady=self.layout["row_pad"])
+        self._create_date_picker(end_frame, self.summary_dash_end_var, width=14)
+
+        confirm_btn = ttk.Button(control_frame, style='Primary.TButton', command=self._load_summary_dashboard)
+        self._register_text(confirm_btn, "summaryDashboard.confirm", "確定", scope="page")
+        confirm_btn.grid(row=0, column=4, padx=(20, 0), pady=self.layout["row_pad"])
+
+        hint_label = ttk.Label(control_frame, font=('Segoe UI', 9), foreground=self.COLORS['text_secondary'])
+        self._register_text(hint_label, "summaryDashboard.hint", "選擇日期區間後按下確定以產生統計結果", scope="page")
+        hint_label.grid(row=1, column=0, columnspan=5, sticky='w')
+
+        report_date = self.report_context.get("date")
+        if report_date:
+            if not self.summary_dash_start_var.get():
+                self.summary_dash_start_var.set(report_date)
+            if not self.summary_dash_end_var.get():
+                self.summary_dash_end_var.set(report_date)
+
+        table_card = self.create_card(self.summary_scroll_frame, '📋', "cards.attendanceTable", "出勤統計表")
+        table_card.pack(fill='both', expand=True, pady=(0, 20))
+
+        table_frame = ttk.Frame(table_card, style='Card.TFrame')
+        table_frame.pack(fill='both', expand=True, padx=self.layout["card_pad"], pady=self.layout["card_pad"])
+
+        cols = ("date", "area", "regular_present", "regular_absent", "contract_present", "contract_absent", "notes")
+        self.summary_dash_columns = cols
+        self.summary_dash_header_keys = [
+            ("common.date", "日期"),
+            ("common.area", "區域"),
+            ("summaryDashboard.regularPresent", "正職出勤"),
+            ("summaryDashboard.regularAbsent", "正職缺勤"),
+            ("summaryDashboard.contractPresent", "契約出勤"),
+            ("summaryDashboard.contractAbsent", "契約缺勤"),
+            ("common.notes", "備註"),
         ]
-        
-        for i, (emoji, label_key, label_default, value, unit_key, unit_default) in enumerate(stat_items):
-            frame = ttk.Frame(stats_frame, style='Card.TFrame')
-            frame.grid(row=0, column=i, padx=10, pady=0)
-            
-            ttk.Label(frame, text=emoji, font=('Segoe UI', 24)).pack()
-            label_widget = ttk.Label(frame, font=('Segoe UI', 10), foreground=self.COLORS['text_secondary'])
-            self._register_text(label_widget, label_key, label_default, scope="page")
-            label_widget.pack()
-            ttk.Label(frame, text=value, font=('Segoe UI', 18, 'bold'), foreground=self.COLORS['primary']).pack()
-            unit_widget = ttk.Label(frame, font=('Segoe UI', 9), foreground=self.COLORS['text_secondary'])
-            self._register_text(unit_widget, unit_key, unit_default, scope="page")
-            unit_widget.pack()
+
+        self.summary_dash_tree = ttk.Treeview(table_frame, columns=cols, show="headings", height=12)
+        self._update_summary_dashboard_headers()
+        self.summary_dash_tree.pack(side='left', fill='both', expand=True)
+        table_scroll = ttk.Scrollbar(table_frame, orient="vertical", command=self.summary_dash_tree.yview)
+        self.summary_dash_tree.configure(yscrollcommand=table_scroll.set)
+        table_scroll.pack(side="right", fill="y")
+
+        charts_card = self.create_card(self.summary_scroll_frame, '📊', "cards.attendanceCharts", "出勤圖表")
+        charts_card.pack(fill='both', expand=True)
+
+        charts_frame = ttk.Frame(charts_card, style='Card.TFrame')
+        charts_frame.pack(fill='both', expand=True, padx=self.layout["card_pad"], pady=self.layout["card_pad"])
+        charts_frame.columnconfigure(0, weight=1)
+        charts_frame.columnconfigure(1, weight=1)
+
+        self.summary_pie_frame = ttk.Frame(charts_frame, style='Card.TFrame')
+        self.summary_pie_frame.grid(row=0, column=0, sticky='nsew', padx=(0, 10))
+        self.summary_bar_frame = ttk.Frame(charts_frame, style='Card.TFrame')
+        self.summary_bar_frame.grid(row=0, column=1, sticky='nsew')
+
+        self.summary_pie_canvas = None
+        self.summary_bar_canvas = None
+        self.summary_dashboard_data = None
+        self._render_summary_charts(None)
+
+    def _summary_scroll_setup(self):
+        self.summary_scroll_canvas = tk.Canvas(
+            self.page_content,
+            background=self.COLORS['background'],
+            highlightthickness=0
+        )
+        self.summary_scroll_canvas.pack(side="left", fill="both", expand=True)
+        scroll = ttk.Scrollbar(self.page_content, orient="vertical", command=self.summary_scroll_canvas.yview)
+        scroll.pack(side="right", fill="y")
+        self.summary_scroll_canvas.configure(yscrollcommand=scroll.set)
+        self.summary_scroll_frame = ttk.Frame(self.summary_scroll_canvas, style='Modern.TFrame')
+        self.summary_scroll_window = self.summary_scroll_canvas.create_window(
+            (0, 0),
+            window=self.summary_scroll_frame,
+            anchor="nw"
+        )
+
+        def _on_frame_config(_event):
+            self.summary_scroll_canvas.configure(scrollregion=self.summary_scroll_canvas.bbox("all"))
+
+        def _on_canvas_config(event):
+            self.summary_scroll_canvas.itemconfigure(self.summary_scroll_window, width=event.width)
+
+        self.summary_scroll_frame.bind("<Configure>", _on_frame_config)
+        self.summary_scroll_canvas.bind("<Configure>", _on_canvas_config)
+        self._bind_canvas_mousewheel(self.summary_scroll_frame, self.summary_scroll_canvas)
+
+    def _bind_canvas_mousewheel(self, widget, canvas):
+        def _on_mousewheel(event):
+            if event.delta:
+                canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+            elif event.num == 4:
+                canvas.yview_scroll(-1, "units")
+            elif event.num == 5:
+                canvas.yview_scroll(1, "units")
+
+        def _on_enter(_event):
+            canvas.bind_all("<MouseWheel>", _on_mousewheel)
+            canvas.bind_all("<Button-4>", _on_mousewheel)
+            canvas.bind_all("<Button-5>", _on_mousewheel)
+
+        def _on_leave(_event):
+            canvas.unbind_all("<MouseWheel>")
+            canvas.unbind_all("<Button-4>")
+            canvas.unbind_all("<Button-5>")
+
+        widget.bind("<Enter>", _on_enter)
+        widget.bind("<Leave>", _on_leave)
+
+    def _update_summary_dashboard_headers(self):
+        if not hasattr(self, "summary_dash_tree"):
+            return
+        for col, (key, default) in zip(self.summary_dash_columns, self.summary_dash_header_keys):
+            self.summary_dash_tree.heading(col, text=self._t(key, default))
+        widths = {
+            "date": 110,
+            "area": 120,
+            "regular_present": 90,
+            "regular_absent": 90,
+            "contract_present": 90,
+            "contract_absent": 90,
+            "notes": 260,
+        }
+        anchors = {
+            "date": "center",
+            "area": "center",
+            "regular_present": "center",
+            "regular_absent": "center",
+            "contract_present": "center",
+            "contract_absent": "center",
+            "notes": "w",
+        }
+        for col in self.summary_dash_columns:
+            self.summary_dash_tree.column(col, width=widths.get(col, 100), stretch=(col == "notes"), anchor=anchors.get(col, "center"))
+
+    def _build_attendance_notes(self, regular_reason, contract_reason):
+        parts = []
+        regular_label = self._t("attendance.regular_short", "正職")
+        contract_label = self._t("attendance.contractor_short", "契約")
+        if regular_reason:
+            parts.append(f"{regular_label}: {regular_reason}")
+        if contract_reason:
+            parts.append(f"{contract_label}: {contract_reason}")
+        return " / ".join(parts)
+
+    def _load_summary_dashboard(self):
+        if not hasattr(self, "summary_dash_tree"):
+            return
+        self._clear_tree(self.summary_dash_tree)
+        start = self.summary_dash_start_var.get().strip()
+        end = self.summary_dash_end_var.get().strip()
+        if not start or not end:
+            messagebox.showwarning(
+                self._t("common.warning", "提醒"),
+                self._t("summaryDashboard.missingRange", "請先選擇統計開始日期與結束日期。")
+            )
+            self.summary_dashboard_data = None
+            self._render_summary_charts(None)
+            return
+        try:
+            start_date = datetime.strptime(start, "%Y-%m-%d").date()
+            end_date = datetime.strptime(end, "%Y-%m-%d").date()
+        except ValueError:
+            messagebox.showwarning(
+                self._t("common.warning", "提醒"),
+                self._t("errors.invalidDateFormat", "日期格式需為 YYYY-MM-DD")
+            )
+            self.summary_dashboard_data = None
+            self._render_summary_charts(None)
+            return
+        if end_date < start_date:
+            messagebox.showwarning(
+                self._t("common.warning", "提醒"),
+                self._t("summaryDashboard.invalidRange", "結束日期不可早於開始日期。")
+            )
+            self.summary_dashboard_data = None
+            self._render_summary_charts(None)
+            return
+
+        try:
+            with SessionLocal() as db:
+                reports = (
+                    db.query(DailyReport)
+                    .filter(DailyReport.date >= start_date, DailyReport.date <= end_date)
+                    .order_by(DailyReport.date, DailyReport.area)
+                    .all()
+                )
+                if not reports:
+                    self.summary_dashboard_data = None
+                    self._render_summary_charts(None)
+                    messagebox.showinfo(
+                        self._t("common.info", "資訊"),
+                        self._t("common.emptyData", "查無資料")
+                    )
+                    return
+                report_ids = [report.id for report in reports]
+                attendance_rows = (
+                    db.query(AttendanceEntry)
+                    .filter(AttendanceEntry.report_id.in_(report_ids))
+                    .all()
+                )
+
+            attendance_by_report = {}
+            for report in reports:
+                attendance_by_report[report.id] = {
+                    "regular": {"present": 0, "absent": 0, "reason": ""},
+                    "contract": {"present": 0, "absent": 0, "reason": ""},
+                }
+
+            for row in attendance_rows:
+                category = (row.category or "").lower()
+                bucket = "regular" if category.startswith("reg") else "contract"
+                target = attendance_by_report.get(row.report_id)
+                if not target:
+                    continue
+                slot = target[bucket]
+                slot["present"] += int(row.present_count or 0)
+                slot["absent"] += int(row.absent_count or 0)
+                reason = (row.reason or "").strip()
+                if reason:
+                    if slot["reason"]:
+                        slot["reason"] = f"{slot['reason']} / {reason}"
+                    else:
+                        slot["reason"] = reason
+
+            total_present = 0
+            total_absent = 0
+            daily_counts = defaultdict(lambda: {"regular": 0, "contract": 0, "present": 0, "absent": 0})
+
+            for report in reports:
+                data = attendance_by_report.get(report.id, {})
+                regular = data.get("regular", {})
+                contract = data.get("contract", {})
+                regular_present = regular.get("present", 0)
+                regular_absent = regular.get("absent", 0)
+                contract_present = contract.get("present", 0)
+                contract_absent = contract.get("absent", 0)
+                notes = self._build_attendance_notes(regular.get("reason", ""), contract.get("reason", ""))
+
+                self.summary_dash_tree.insert(
+                    "",
+                    "end",
+                    values=(
+                        report.date.strftime("%Y-%m-%d"),
+                        report.area,
+                        regular_present,
+                        regular_absent,
+                        contract_present,
+                        contract_absent,
+                        notes,
+                    ),
+                )
+
+                total_present += regular_present + contract_present
+                total_absent += regular_absent + contract_absent
+                daily_counts[report.date]["regular"] += regular_present
+                daily_counts[report.date]["contract"] += contract_present
+                daily_counts[report.date]["present"] += regular_present + contract_present
+                daily_counts[report.date]["absent"] += regular_absent + contract_absent
+
+            daily_series = []
+            for date_key in sorted(daily_counts.keys()):
+                daily_series.append(
+                    {
+                        "date": date_key,
+                        "regular": daily_counts[date_key]["regular"],
+                        "contract": daily_counts[date_key]["contract"],
+                        "present": daily_counts[date_key]["present"],
+                        "absent": daily_counts[date_key]["absent"],
+                    }
+                )
+
+            self.summary_dashboard_data = {
+                "total_present": total_present,
+                "total_absent": total_absent,
+                "daily_series": daily_series,
+            }
+            self._render_summary_charts(self.summary_dashboard_data)
+        except Exception as exc:
+            self.summary_dashboard_data = None
+            self._render_summary_charts(None)
+            messagebox.showerror(
+                self._t("common.error", "錯誤"),
+                self._t("summaryDashboard.loadFailed", "統計載入失敗：{error}").format(error=exc)
+            )
+
+    def _ensure_cjk_font(self):
+        if self._cjk_font_ready:
+            return
+        candidates = [
+            "Noto Sans CJK TC",
+            "Noto Sans CJK JP",
+            "Noto Sans CJK SC",
+            "Noto Sans TC",
+            "Noto Sans JP",
+            "Microsoft YaHei",
+            "PingFang TC",
+            "PingFang SC",
+            "Heiti TC",
+            "Hiragino Sans",
+            "Yu Gothic",
+            "MS Gothic",
+            "IPAexGothic",
+            "IPAGothic",
+            "SimHei",
+            "Arial Unicode MS",
+        ]
+        rcParams["font.family"] = "sans-serif"
+        rcParams["font.sans-serif"] = candidates + ["DejaVu Sans"]
+        rcParams["axes.unicode_minus"] = False
+        self._cjk_font_ready = True
+
+    def _clear_summary_charts(self):
+        for frame in (getattr(self, "summary_pie_frame", None), getattr(self, "summary_bar_frame", None)):
+            if not frame or not frame.winfo_exists():
+                continue
+            for child in frame.winfo_children():
+                child.destroy()
+        self.summary_pie_canvas = None
+        self.summary_bar_canvas = None
+
+    def _render_summary_charts(self, data):
+        self._clear_summary_charts()
+        if not data:
+            empty_text = self._t("common.emptyData", "查無資料")
+            if hasattr(self, "summary_pie_frame"):
+                ttk.Label(self.summary_pie_frame, text=empty_text, font=('Segoe UI', 10)).pack(expand=True)
+            if hasattr(self, "summary_bar_frame"):
+                ttk.Label(self.summary_bar_frame, text=empty_text, font=('Segoe UI', 10)).pack(expand=True)
+            return
+
+        self._ensure_cjk_font()
+
+        daily_series = data.get("daily_series", [])
+        labels = [item["date"].strftime("%Y-%m-%d") for item in daily_series]
+        regular_values = [item["regular"] for item in daily_series]
+        contract_values = [item["contract"] for item in daily_series]
+        rate_values = []
+        for item in daily_series:
+            total = item.get("present", 0) + item.get("absent", 0)
+            rate_values.append((item.get("present", 0) / total * 100) if total else 0)
+
+        line_fig = Figure(figsize=(4.2, 3.2), dpi=100)
+        line_ax = line_fig.add_subplot(111)
+        line_ax.set_title(self._t("summaryDashboard.rateLineTitle", "出勤率趨勢"))
+        if labels:
+            x = range(len(labels))
+            line_ax.plot(
+                list(x),
+                rate_values,
+                marker="o",
+                color="#2e7d32",
+                label=self._t("summaryDashboard.rateSeries", "出勤率"),
+            )
+            line_ax.set_xticks(list(x))
+            line_ax.set_xticklabels(labels, rotation=45, ha="right")
+            line_ax.set_ylabel(self._t("summaryDashboard.rateAxis", "出勤率 (%)"))
+            line_ax.set_ylim(0, 100)
+            line_ax.legend(loc="upper right")
+        else:
+            line_ax.text(0.5, 0.5, self._t("common.emptyData", "查無資料"), ha="center", va="center")
+        line_fig.tight_layout()
+        self.summary_pie_canvas = FigureCanvasTkAgg(line_fig, master=self.summary_pie_frame)
+        self.summary_pie_canvas.draw()
+        self.summary_pie_canvas.get_tk_widget().pack(fill='both', expand=True)
+
+        bar_fig = Figure(figsize=(4.6, 3.2), dpi=100)
+        bar_ax = bar_fig.add_subplot(111)
+        bar_ax.set_title(self._t("summaryDashboard.countChartTitle", "出勤人數"))
+
+        if labels:
+            x = range(len(labels))
+            bar_ax.bar(x, regular_values, label=self._t("attendance.regular_short", "正職"), color="#1976D2")
+            bar_ax.bar(
+                x,
+                contract_values,
+                bottom=regular_values,
+                label=self._t("attendance.contractor_short", "契約"),
+                color="#FFB74D",
+            )
+            bar_ax.set_xticks(list(x))
+            bar_ax.set_xticklabels(labels, rotation=45, ha="right")
+            bar_ax.set_ylabel(self._t("summaryDashboard.countAxis", "出勤人數"))
+            bar_ax.legend(loc="upper right")
+        else:
+            bar_ax.text(0.5, 0.5, self._t("common.emptyData", "查無資料"), ha="center", va="center")
+        bar_fig.tight_layout()
+        self.summary_bar_canvas = FigureCanvasTkAgg(bar_fig, master=self.summary_bar_frame)
+        self.summary_bar_canvas.draw()
+        self.summary_bar_canvas.get_tk_widget().pack(fill='both', expand=True)
 
     def create_delay_list_page(self):
         """創建延遲清單頁面"""
@@ -806,20 +1410,20 @@ class ModernMainFrame:
         control_frame.pack(fill='x', padx=self.layout["card_pad"], pady=self.layout["card_pad"])
 
         start_label = ttk.Label(control_frame, font=('Segoe UI', 10))
-        self._register_text(start_label, "delay.startDate", "起日 YYYY-MM-DD", scope="page")
+        self._register_text(start_label, "delay.startDate", "起日", scope="page")
         start_label.grid(row=0, column=0, sticky='w', pady=self.layout["row_pad"])
         self.delay_start_var = tk.StringVar()
-        ttk.Entry(control_frame, textvariable=self.delay_start_var, style='Modern.TEntry', width=16).grid(
-            row=0, column=1, sticky='w', padx=(self.layout["field_gap"], 0), pady=self.layout["row_pad"]
-        )
+        start_frame = ttk.Frame(control_frame, style='Card.TFrame')
+        start_frame.grid(row=0, column=1, sticky='w', padx=(self.layout["field_gap"], 0), pady=self.layout["row_pad"])
+        self._create_date_picker(start_frame, self.delay_start_var, width=14)
 
         end_label = ttk.Label(control_frame, font=('Segoe UI', 10))
-        self._register_text(end_label, "delay.endDate", "迄日 YYYY-MM-DD", scope="page")
+        self._register_text(end_label, "delay.endDate", "迄日", scope="page")
         end_label.grid(row=0, column=2, sticky='w', padx=(20, 0), pady=self.layout["row_pad"])
         self.delay_end_var = tk.StringVar()
-        ttk.Entry(control_frame, textvariable=self.delay_end_var, style='Modern.TEntry', width=16).grid(
-            row=0, column=3, sticky='w', padx=(self.layout["field_gap"], 0), pady=self.layout["row_pad"]
-        )
+        end_frame = ttk.Frame(control_frame, style='Card.TFrame')
+        end_frame.grid(row=0, column=3, sticky='w', padx=(self.layout["field_gap"], 0), pady=self.layout["row_pad"])
+        self._create_date_picker(end_frame, self.delay_end_var, width=14)
         self._apply_report_date_to_filters()
 
         search_btn = ttk.Button(control_frame, style='Accent.TButton', command=self._load_delay_entries)
@@ -906,20 +1510,20 @@ class ModernMainFrame:
         control_frame.pack(fill='x', padx=self.layout["card_pad"], pady=self.layout["card_pad"])
 
         start_label = ttk.Label(control_frame, font=('Segoe UI', 10))
-        self._register_text(start_label, "summaryActual.startDate", "日期篩選起日 YYYY-MM-DD", scope="page")
+        self._register_text(start_label, "summaryActual.startDate", "日期篩選起日", scope="page")
         start_label.grid(row=0, column=0, sticky='w', pady=self.layout["row_pad"])
         self.summary_start_var = tk.StringVar()
-        ttk.Entry(control_frame, textvariable=self.summary_start_var, style='Modern.TEntry', width=16).grid(
-            row=0, column=1, sticky='w', padx=(self.layout["field_gap"], 0), pady=self.layout["row_pad"]
-        )
+        summary_start_frame = ttk.Frame(control_frame, style='Card.TFrame')
+        summary_start_frame.grid(row=0, column=1, sticky='w', padx=(self.layout["field_gap"], 0), pady=self.layout["row_pad"])
+        self._create_date_picker(summary_start_frame, self.summary_start_var, width=14)
 
         end_label = ttk.Label(control_frame, font=('Segoe UI', 10))
-        self._register_text(end_label, "summaryActual.endDate", "日期篩選迄日 YYYY-MM-DD", scope="page")
+        self._register_text(end_label, "summaryActual.endDate", "日期篩選迄日", scope="page")
         end_label.grid(row=0, column=2, sticky='w', padx=(20, 0), pady=self.layout["row_pad"])
         self.summary_end_var = tk.StringVar()
-        ttk.Entry(control_frame, textvariable=self.summary_end_var, style='Modern.TEntry', width=16).grid(
-            row=0, column=3, sticky='w', padx=(self.layout["field_gap"], 0), pady=self.layout["row_pad"]
-        )
+        summary_end_frame = ttk.Frame(control_frame, style='Card.TFrame')
+        summary_end_frame.grid(row=0, column=3, sticky='w', padx=(self.layout["field_gap"], 0), pady=self.layout["row_pad"])
+        self._create_date_picker(summary_end_frame, self.summary_end_var, width=14)
         self._apply_report_date_to_filters()
 
         search_btn = ttk.Button(control_frame, style='Accent.TButton', command=self._load_summary_actual)
@@ -996,21 +1600,28 @@ class ModernMainFrame:
         self.admin_notebook.pack(fill='both', expand=True)
         
         # 使用者管理分頁
-        user_tab = ttk.Frame(admin_notebook, style='Modern.TFrame')
+        user_tab = ttk.Frame(self.admin_notebook, style='Modern.TFrame')
         self.admin_notebook.add(user_tab, text=self._t("admin.tabUsers", "👥 使用者管理"))
         
         self.admin_user_mgmt = UserManagementSection(user_tab, self.lang_manager)
         self.admin_user_mgmt.get_widget().pack(fill='both', expand=True, padx=20, pady=20)
         
         # 翻譯管理分頁
-        translation_tab = ttk.Frame(admin_notebook, style='Modern.TFrame')
+        translation_tab = ttk.Frame(self.admin_notebook, style='Modern.TFrame')
         self.admin_notebook.add(translation_tab, text=self._t("admin.tabTranslations", "🌐 翻譯管理"))
         
         self.admin_trans_mgmt = TranslationManagementSection(translation_tab, self.lang_manager)
         self.admin_trans_mgmt.get_widget().pack(fill='both', expand=True, padx=20, pady=20)
+
+        # 班別/區域管理分頁
+        master_tab = ttk.Frame(self.admin_notebook, style='Modern.TFrame')
+        self.admin_notebook.add(master_tab, text=self._t("admin.tabMasterData", "🧩 班別/區域"))
+
+        self.admin_master_data = MasterDataSection(master_tab, self.lang_manager, on_change=self.refresh_shift_area_options)
+        self.admin_master_data.get_widget().pack(fill='both', expand=True, padx=20, pady=20)
         
         # 系統設定分頁
-        settings_tab = ttk.Frame(admin_notebook, style='Modern.TFrame')
+        settings_tab = ttk.Frame(self.admin_notebook, style='Modern.TFrame')
         self.admin_notebook.add(settings_tab, text=self._t("admin.tabSettings", "⚙️ 系統設定"))
         
         self.create_settings_page(settings_tab)
@@ -1085,33 +1696,71 @@ class ModernMainFrame:
                 else:
                     label = self._t(text_key, text_default)
                     self.nav_buttons[item_id].configure(text=f"{icon} {label}")
+
+    def _set_navigation_locked(self, locked):
+        self.nav_locked = locked
+        if not hasattr(self, "nav_buttons"):
+            return
+        for page_id, button in self.nav_buttons.items():
+            if page_id == "daily_report":
+                button.configure(state="normal")
+            else:
+                button.configure(state="disabled" if locked else "normal")
+        if not locked:
+            self._update_auth_ui()
+
+    def _reset_report_state(self):
+        self.report_is_saved = False
+        self.active_report_id = None
+        self.saved_context = {"date": "", "shift": "", "area": ""}
+        self._set_navigation_locked(True)
     
     def toggle_auth(self):
         """切換登入/登出"""
         if self.current_user:
             self.logout()
         else:
-            self.login()
-    
-    def login(self):
-        """登入"""
+            self._show_login_screen()
+
+    def attempt_login(self):
+        """登入驗證"""
+        username = self.login_username_var.get().strip() if hasattr(self, "login_username_var") else ""
+        password = self.login_password_var.get() if hasattr(self, "login_password_var") else ""
+        if not username or not password:
+            messagebox.showerror(
+                self._t("common.error", "錯誤"),
+                self._t("auth.loginMissing", "請輸入帳號與密碼")
+            )
+            return
         try:
-            from frontend.src.components.password_change_dialog import PasswordChangeDialog
-            
-            # 模擬登入
-            self.current_user = {'username': 'Admin', 'role': 'admin'}
+            with SessionLocal() as db:
+                user = db.query(User).filter_by(username=username).first()
+                if not user or not verify_password(password, user.password_hash):
+                    messagebox.showerror(
+                        self._t("common.error", "錯誤"),
+                        self._t("auth.loginFailed", "帳號或密碼錯誤")
+                    )
+                    return
+                self.current_user = {"id": user.id, "username": user.username, "role": user.role}
             self._update_auth_ui()
+            self._reset_report_state()
+            self._show_main_ui()
+            self.show_page('daily_report')
             self._set_status("status.loginSuccess", "✅ 登入成功")
-            
-        except ImportError:
-            messagebox.showerror(self._t("common.error", "錯誤"), self._t("auth.loginUnavailable", "登入功能暫時無法使用"))
+            self.login_password_var.set("")
+        except Exception as exc:
+            messagebox.showerror(
+                self._t("common.error", "錯誤"),
+                self._t("auth.loginFailedDetail", "登入失敗：{error}").format(error=exc)
+            )
     
     def logout(self):
         """登出"""
         self.current_user = None
         self._update_auth_ui()
+        self._reset_report_state()
         self._set_status("status.loggedOut", "✅ 已登出")
-        self.show_page('daily_report')
+        self._show_login_screen()
     
     def on_language_changed(self, new_lang_code):
         """語言變更回調"""
@@ -1120,6 +1769,10 @@ class ModernMainFrame:
         self._apply_i18n()
         self.update_nav_text()
         self.lang_selector.update_text()
+        self.lang_selector.update_language_display(new_lang_code)
+        if hasattr(self, "login_lang_selector"):
+            self.login_lang_selector.update_text()
+            self.login_lang_selector.update_language_display(new_lang_code)
         self._update_auth_ui()
         self._update_admin_tab_texts()
         if hasattr(self, "attendance_section"):
@@ -1128,10 +1781,15 @@ class ModernMainFrame:
             self.admin_user_mgmt.update_ui_language()
         if hasattr(self, "admin_trans_mgmt"):
             self.admin_trans_mgmt.update_ui_language()
+        if hasattr(self, "admin_master_data"):
+            self.admin_master_data.update_ui_language()
         self._update_shift_values()
         self._sync_report_context_from_form()
         self._update_delay_headers()
+        self._update_summary_dashboard_headers()
         self._update_summary_headers()
+        if self.current_page == "summary" and self.summary_dashboard_data:
+            self._render_summary_charts(self.summary_dashboard_data)
         self._update_report_context_label()
         self.status_label.config(text=self._t("status.languageChanged", "🌐 語言已切換至: {language}").format(language=current_lang_name))
         self.update_nav_text()
@@ -1153,7 +1811,8 @@ class ModernMainFrame:
         tabs = [
             (0, "admin.tabUsers", "👥 使用者管理"),
             (1, "admin.tabTranslations", "🌐 翻譯管理"),
-            (2, "admin.tabSettings", "⚙️ 系統設定"),
+            (2, "admin.tabMasterData", "🧩 班別/區域"),
+            (3, "admin.tabSettings", "⚙️ 系統設定"),
         ]
         for index, key, default in tabs:
             try:
@@ -1164,38 +1823,233 @@ class ModernMainFrame:
     def _update_shift_values(self):
         if not hasattr(self, "shift_combo") or not hasattr(self, "shift_var"):
             return
-        new_values = [
-            self._t("shift.day", "Day"),
-            self._t("shift.night", "Night"),
-        ]
-        current = self.shift_var.get()
-        try:
-            index = self.shift_values.index(current)
-        except Exception:
-            index = 0
+        if not self.shift_combo.winfo_exists():
+            return
+        self._load_shift_area_options()
+        current_code = self._get_shift_code()
+        new_values = self._build_shift_display_options()
         self.shift_values = new_values
         self.shift_combo["values"] = new_values
-        self.shift_var.set(new_values[index])
+        if current_code in self.shift_display_map:
+            self.shift_var.set(self.shift_display_map[current_code])
+        elif new_values:
+            self.shift_var.set(new_values[0])
+
+    def _get_shift_code(self):
+        if hasattr(self, "shift_code_map"):
+            return self.shift_code_map.get(self.shift_var.get().strip(), self.shift_var.get().strip())
+        return self.shift_var.get().strip() if hasattr(self, "shift_var") else ""
+
+    def refresh_shift_area_options(self):
+        self._load_shift_area_options()
+        if hasattr(self, "shift_combo") and self.shift_combo.winfo_exists():
+            current_code = self._get_shift_code()
+            new_values = self._build_shift_display_options()
+            self.shift_values = new_values
+            self.shift_combo["values"] = new_values
+            if current_code in self.shift_display_map:
+                self.shift_var.set(self.shift_display_map[current_code])
+            elif new_values:
+                self.shift_var.set(new_values[0])
+        if hasattr(self, "area_combo") and self.area_combo.winfo_exists():
+            current_area = self.area_var.get().strip() if hasattr(self, "area_var") else ""
+            self.area_combo["values"] = self.area_options
+            if current_area in self.area_options:
+                self.area_var.set(current_area)
+            elif self.area_options:
+                self.area_var.set(self.area_options[0])
     
     def add_equipment_record(self):
         """添加設備記錄"""
         if not self.ensure_report_context():
             return
-        self._set_status("status.equipmentAdded", "✅ 設備異常記錄已添加")
+        equip_id = self.equip_id_var.get().strip()
+        description = self.equip_desc_text.get("1.0", "end").strip()
+        start_time = self.start_time_var.get().strip()
+        action_taken = self.action_text.get("1.0", "end").strip()
+        image_path = self.image_path_var.get().strip() if hasattr(self, "image_path_var") else ""
+        if not equip_id or not description:
+            messagebox.showwarning(
+                self._t("common.warning", "提醒"),
+                self._t("equipment.missingRequired", "請填寫設備號碼與異常內容")
+            )
+            return
+        try:
+            impact_qty = int(self.impact_qty_var.get() or 0)
+        except ValueError:
+            messagebox.showerror(
+                self._t("common.error", "錯誤"),
+                self._t("equipment.invalidImpactQty", "影響數量需為數字")
+            )
+            return
+        try:
+            with SessionLocal() as db:
+                entry = EquipmentLog(
+                    report_id=self.active_report_id,
+                    equip_id=equip_id,
+                    description=description,
+                    start_time=start_time,
+                    impact_qty=impact_qty,
+                    action_taken=action_taken,
+                    image_path=image_path or None,
+                )
+                db.add(entry)
+                db.commit()
+            self._set_status("status.equipmentAdded", "✅ 設備異常記錄已添加")
+            self.equip_id_var.set("")
+            self.start_time_var.set("")
+            self.impact_qty_var.set("0")
+            self.equip_desc_text.delete("1.0", "end")
+            self.action_text.delete("1.0", "end")
+            if hasattr(self, "image_path_var"):
+                self.image_path_var.set("")
+        except Exception as exc:
+            messagebox.showerror(
+                self._t("common.error", "錯誤"),
+                self._t("equipment.saveFailed", "設備異常儲存失敗：{error}").format(error=exc)
+            )
     
     def view_equipment_history(self):
         """查看設備歷史"""
-        self._set_status("status.equipmentHistoryLoading", "📋 正在載入設備異常歷史...")
+        if not self.ensure_report_context():
+            return
+        try:
+            with SessionLocal() as db:
+                rows = db.query(EquipmentLog).filter_by(report_id=self.active_report_id).order_by(EquipmentLog.id.desc()).all()
+            if not rows:
+                messagebox.showinfo(
+                    self._t("common.info", "資訊"),
+                    self._t("equipment.noHistory", "目前日報沒有設備異常記錄")
+                )
+                return
+            self._open_equipment_history_dialog(rows)
+        except Exception as exc:
+            messagebox.showerror(
+                self._t("common.error", "錯誤"),
+                self._t("equipment.loadFailed", "載入設備異常失敗：{error}").format(error=exc)
+            )
     
     def add_lot_record(self):
         """添加批次記錄"""
         if not self.ensure_report_context():
             return
-        self._set_status("status.lotAdded", "✅ 批次異常記錄已添加")
+        lot_id = self.lot_id_var.get().strip()
+        description = self.lot_desc_text.get("1.0", "end").strip()
+        status_text = self.lot_status_var.get().strip()
+        notes = self.lot_notes_text.get("1.0", "end").strip()
+        if not lot_id or not description:
+            messagebox.showwarning(
+                self._t("common.warning", "提醒"),
+                self._t("lot.missingRequired", "請填寫批號與異常內容")
+            )
+            return
+        try:
+            with SessionLocal() as db:
+                entry = LotLog(
+                    report_id=self.active_report_id,
+                    lot_id=lot_id,
+                    description=description,
+                    status=status_text,
+                    notes=notes,
+                )
+                db.add(entry)
+                db.commit()
+            self._set_status("status.lotAdded", "✅ 批次異常記錄已添加")
+            self.lot_id_var.set("")
+            self.lot_status_var.set("")
+            self.lot_desc_text.delete("1.0", "end")
+            self.lot_notes_text.delete("1.0", "end")
+        except Exception as exc:
+            messagebox.showerror(
+                self._t("common.error", "錯誤"),
+                self._t("lot.saveFailed", "批次異常儲存失敗：{error}").format(error=exc)
+            )
     
     def view_lot_list(self):
         """查看批次列表"""
-        self._set_status("status.lotListLoading", "📋 正在載入批次異常列表...")
+        if not self.ensure_report_context():
+            return
+        try:
+            with SessionLocal() as db:
+                rows = db.query(LotLog).filter_by(report_id=self.active_report_id).order_by(LotLog.id.desc()).all()
+            if not rows:
+                messagebox.showinfo(
+                    self._t("common.info", "資訊"),
+                    self._t("lot.noHistory", "目前日報沒有批次異常記錄")
+                )
+                return
+            self._open_lot_history_dialog(rows)
+        except Exception as exc:
+            messagebox.showerror(
+                self._t("common.error", "錯誤"),
+                self._t("lot.loadFailed", "載入批次異常失敗：{error}").format(error=exc)
+            )
+
+    def _open_history_dialog(self, title, columns, headers, rows, row_builder):
+        dialog = tk.Toplevel(self.parent)
+        dialog.title(title)
+        dialog.geometry("900x420")
+        dialog.transient(self.parent)
+
+        frame = ttk.Frame(dialog, padding=10)
+        frame.pack(fill='both', expand=True)
+
+        tree = ttk.Treeview(frame, columns=columns, show="headings", height=14)
+        for col, (key, default) in zip(columns, headers):
+            tree.heading(col, text=self._t(key, default))
+            tree.column(col, width=150, anchor="w")
+        tree.pack(side='left', fill='both', expand=True)
+
+        scroll = ttk.Scrollbar(frame, orient="vertical", command=tree.yview)
+        tree.configure(yscrollcommand=scroll.set)
+        scroll.pack(side="right", fill="y")
+
+        for row in rows:
+            tree.insert("", "end", values=row_builder(row))
+
+    def _open_equipment_history_dialog(self, rows):
+        columns = ("equip_id", "start_time", "impact_qty", "description", "action_taken")
+        headers = [
+            ("equipment.equipId", "設備號碼"),
+            ("equipment.startTime", "發生時刻"),
+            ("equipment.impactQty", "影響數量"),
+            ("common.description", "異常內容"),
+            ("equipment.actionTaken", "對應內容"),
+        ]
+        self._open_history_dialog(
+            self._t("equipment.historyTitle", "設備異常記錄"),
+            columns,
+            headers,
+            rows,
+            lambda row: (
+                row.equip_id,
+                row.start_time,
+                row.impact_qty,
+                row.description,
+                row.action_taken,
+            ),
+        )
+
+    def _open_lot_history_dialog(self, rows):
+        columns = ("lot_id", "description", "status", "notes")
+        headers = [
+            ("lot.lotId", "批號"),
+            ("common.description", "異常內容"),
+            ("lot.status", "處置狀況"),
+            ("lot.notes", "特記事項"),
+        ]
+        self._open_history_dialog(
+            self._t("lot.historyTitle", "批次異常記錄"),
+            columns,
+            headers,
+            rows,
+            lambda row: (
+                row.lot_id,
+                row.description,
+                row.status,
+                row.notes,
+            ),
+        )
     
     def browse_image(self):
         """瀏覽圖片"""
@@ -1211,10 +2065,94 @@ class ModernMainFrame:
                 )
             )
     
+    def save_basic_info(self):
+        """儲存日報基本資訊"""
+        report_id = self._save_report(context_only=True)
+        if report_id:
+            self._set_status("status.basicInfoSaved", "✅ 基本資訊已儲存")
+            messagebox.showinfo(
+                self._t("common.success", "成功"),
+                self._t("status.basicInfoSavedDetail", "基本資訊已儲存（報表 ID: {report_id}）").format(report_id=report_id)
+            )
+
     def save_daily_report(self):
-        """儲存日報"""
+        """儲存日報內容"""
+        if not self.ensure_report_context():
+            return
+        if self._save_report(context_only=False):
+            self._set_status("status.dailySaved", "💾 日報已儲存")
+
+    def _save_report(self, context_only=False):
         self._sync_report_context_from_form()
-        self._set_status("status.dailySaved", "💾 日報已儲存")
+        date_str = self.report_context.get("date", "").strip()
+        shift_code = self._get_shift_code()
+        area = self.report_context.get("area", "").strip()
+        if not date_str or not shift_code or not area:
+            messagebox.showwarning(
+                self._t("context.missingTitle", "尚未設定日報表"),
+                self._t("context.missingBody", "請先在日報表設定日期、班別、區域後再繼續。")
+            )
+            return None
+        try:
+            report_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+        except ValueError:
+            messagebox.showerror(
+                self._t("common.error", "錯誤"),
+                self._t("errors.invalidDateFormat", "日期格式需為 YYYY-MM-DD")
+            )
+            return None
+        if not self.current_user:
+            messagebox.showwarning(
+                self._t("auth.loginRequiredTitle", "尚未登入"),
+                self._t("auth.loginRequiredBody", "請先登入後再儲存日報。")
+            )
+            return None
+
+        key_output = self.key_output_text.get("1.0", "end").strip()
+        issues = self.key_issues_text.get("1.0", "end").strip()
+        counter = self.countermeasures_text.get("1.0", "end").strip()
+        author_id = self.current_user.get("id")
+
+        try:
+            with SessionLocal() as db:
+                if author_id is None:
+                    user = db.query(User).filter_by(username=self.current_user.get("username")).first()
+                    if not user:
+                        raise ValueError("找不到使用者資料")
+                    author_id = user.id
+                report = (
+                    db.query(DailyReport)
+                    .filter_by(date=report_date, shift=shift_code, area=area)
+                    .first()
+                )
+                if report is None:
+                    report = DailyReport(
+                        date=report_date,
+                        shift=shift_code,
+                        area=area,
+                        author_id=author_id,
+                    )
+                    db.add(report)
+                elif report.author_id != author_id:
+                    report.author_id = author_id
+                if not context_only:
+                    report.summary_key_output = key_output
+                    report.summary_issues = issues
+                    report.summary_countermeasures = counter
+                db.commit()
+                db.refresh(report)
+
+            self.active_report_id = report.id
+            self.report_is_saved = True
+            self.saved_context = {"date": date_str, "shift": shift_code, "area": area}
+            self._set_navigation_locked(False)
+            return report.id
+        except Exception as exc:
+            messagebox.showerror(
+                self._t("common.error", "錯誤"),
+                self._t("status.basicInfoSaveFailed", "基本資訊儲存失敗：{error}").format(error=exc)
+            )
+            return None
     
     def reset_daily_report(self):
         """重置日報"""
@@ -1224,16 +2162,36 @@ class ModernMainFrame:
             self.shift_var.set(self.shift_values[0])
         if hasattr(self, "area_var"):
             self.area_var.set("etching_D")
+        if hasattr(self, "key_output_text"):
+            self.key_output_text.delete("1.0", "end")
+        if hasattr(self, "key_issues_text"):
+            self.key_issues_text.delete("1.0", "end")
+        if hasattr(self, "countermeasures_text"):
+            self.countermeasures_text.delete("1.0", "end")
+        self.report_is_saved = False
+        self.active_report_id = None
+        self.saved_context = {"date": "", "shift": "", "area": ""}
+        self._set_navigation_locked(True)
         self._sync_report_context_from_form()
         self._set_status("status.dailyReset", "🔄 日報表單已重置")
 
     def _sync_report_context_from_form(self):
-        if hasattr(self, "date_var"):
-            self.report_context["date"] = self.date_var.get().strip()
-        if hasattr(self, "shift_var"):
-            self.report_context["shift"] = self.shift_var.get().strip()
-        if hasattr(self, "area_var"):
-            self.report_context["area"] = self.area_var.get().strip()
+        date_value = self.date_var.get().strip() if hasattr(self, "date_var") else ""
+        shift_display = self.shift_var.get().strip() if hasattr(self, "shift_var") else ""
+        area_value = self.area_var.get().strip() if hasattr(self, "area_var") else ""
+        self.report_context["date"] = date_value
+        self.report_context["shift"] = shift_display
+        self.report_context["area"] = area_value
+        current_context = {
+            "date": date_value,
+            "shift": self._get_shift_code(),
+            "area": area_value,
+        }
+        if self.report_is_saved and current_context != self.saved_context:
+            self.report_is_saved = False
+            self.active_report_id = None
+            self._set_navigation_locked(True)
+            self._set_status("status.basicInfoLocked", "⚠️ 請先儲存基本資訊")
         self._update_report_context_label()
 
     def _update_report_context_label(self):
@@ -1266,7 +2224,80 @@ class ModernMainFrame:
                 self._t("context.missingBody", "請先在日報表設定日期、班別、區域後再繼續。")
             )
             return False
+        if not self.report_is_saved or not self.active_report_id:
+            messagebox.showwarning(
+                self._t("context.basicInfoRequiredTitle", "尚未儲存基本資訊"),
+                self._t("context.basicInfoRequiredBody", "請先在日報表儲存日期、班別、區域後再使用其他功能。")
+            )
+            return False
         return True
+
+    def _load_attendance_entries(self):
+        if not self.active_report_id or not hasattr(self, "attendance_section"):
+            return
+        try:
+            with SessionLocal() as db:
+                rows = db.query(AttendanceEntry).filter_by(report_id=self.active_report_id).all()
+            if not rows:
+                self.attendance_section.clear_data()
+                return
+            data = {
+                "regular": {"scheduled": 0, "present": 0, "absent": 0, "reason": ""},
+                "contractor": {"scheduled": 0, "present": 0, "absent": 0, "reason": ""},
+            }
+            for row in rows:
+                category = row.category.lower()
+                if category == "regular":
+                    target = "regular"
+                else:
+                    target = "contractor"
+                data[target] = {
+                    "scheduled": row.scheduled_count,
+                    "present": row.present_count,
+                    "absent": row.absent_count,
+                    "reason": row.reason or "",
+                }
+            self.attendance_section.set_attendance_data(data)
+        except Exception as exc:
+            messagebox.showerror(
+                self._t("common.error", "錯誤"),
+                self._t("attendance.loadFailed", "載入出勤資料失敗：{error}").format(error=exc)
+            )
+
+    def save_attendance_entries(self, data):
+        if not self.ensure_report_context():
+            return False
+        try:
+            with SessionLocal() as db:
+                db.query(AttendanceEntry).filter_by(report_id=self.active_report_id).delete(synchronize_session=False)
+                entries = [
+                    AttendanceEntry(
+                        report_id=self.active_report_id,
+                        category="Regular",
+                        scheduled_count=int(data["regular"]["scheduled"]),
+                        present_count=int(data["regular"]["present"]),
+                        absent_count=int(data["regular"]["absent"]),
+                        reason=data["regular"].get("reason", ""),
+                    ),
+                    AttendanceEntry(
+                        report_id=self.active_report_id,
+                        category="Contract",
+                        scheduled_count=int(data["contractor"]["scheduled"]),
+                        present_count=int(data["contractor"]["present"]),
+                        absent_count=int(data["contractor"]["absent"]),
+                        reason=data["contractor"].get("reason", ""),
+                    ),
+                ]
+                db.add_all(entries)
+                db.commit()
+            self._set_status("status.attendanceSaved", "✅ 出勤資料已儲存")
+            return True
+        except Exception as exc:
+            messagebox.showerror(
+                self._t("common.error", "錯誤"),
+                self._t("attendance.saveFailed", "出勤資料儲存失敗：{error}").format(error=exc)
+            )
+            return False
 
     def _update_delay_headers(self):
         if not hasattr(self, "delay_tree"):
@@ -1527,7 +2558,12 @@ class ModernMainFrame:
         for idx, (key, label, value) in enumerate(fields):
             ttk.Label(dlg, text=label).grid(row=idx, column=0, padx=5, pady=4, sticky="e")
             var = tk.StringVar(value=str(value))
-            ttk.Entry(dlg, textvariable=var, width=30).grid(row=idx, column=1, padx=5, pady=4, sticky="ew")
+            if key == "date":
+                date_frame = ttk.Frame(dlg)
+                date_frame.grid(row=idx, column=1, padx=5, pady=4, sticky="ew")
+                self._create_date_picker(date_frame, var, width=18)
+            else:
+                ttk.Entry(dlg, textvariable=var, width=30).grid(row=idx, column=1, padx=5, pady=4, sticky="ew")
             vars_map[key] = var
 
         def save():
@@ -1810,7 +2846,12 @@ class ModernMainFrame:
         for idx, (key, label_text, value) in enumerate(fields):
             ttk.Label(dlg, text=label_text).grid(row=idx, column=0, padx=5, pady=4, sticky="e")
             var = tk.StringVar(value=str(value))
-            ttk.Entry(dlg, textvariable=var, width=30).grid(row=idx, column=1, padx=5, pady=4, sticky="ew")
+            if key == "date":
+                date_frame = ttk.Frame(dlg)
+                date_frame.grid(row=idx, column=1, padx=5, pady=4, sticky="ew")
+                self._create_date_picker(date_frame, var, width=18)
+            else:
+                ttk.Entry(dlg, textvariable=var, width=30).grid(row=idx, column=1, padx=5, pady=4, sticky="ew")
             vars_map[key] = var
 
         def save():

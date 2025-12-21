@@ -78,6 +78,7 @@
     "unsupportedFormat": "Unsupported file format",
     "add": "Add",
     "areaName": "Area Name",
+    "shiftName": "Shift Name",
     "basicInfo": "Basic Info",
     "confirmQuit": "Are you sure you want to quit?",
     "equipment": "Equipment Issues",
@@ -88,7 +89,8 @@
     "selectSheet": "Select Sheet",
     "emptyData": "No data found",
     "uploadSuccess": "Upload successful",
-    "selectRow": "Please select a row"
+    "selectRow": "Please select a row",
+    "selectDate": "Select date"
   },
   "reports": {
     "title": "Daily Report",
@@ -101,7 +103,7 @@
     "countermeasures": "Countermeasures"
   },
   "login": {
-    "title": "Login",
+    "title": "Sign In",
     "username": "Username",
     "password": "Password",
     "rememberMe": "Remember me",
@@ -112,7 +114,8 @@
     "incorrect": "Invalid username or password.",
     "welcome": "Welcome, {username}",
     "welcome_generic": "Welcome",
-    "welcome_offline": "Welcome (Offline)"
+    "welcome_offline": "Welcome (Offline)",
+    "subtitle": "Enter your username and password"
   },
   "errors": {
     "requiredField": "This field is required",
@@ -141,8 +144,8 @@
       "subtitle": "Log abnormal lots and handling"
     },
     "summary": {
-      "title": "Summary",
-      "subtitle": "Daily summary and analysis"
+      "title": "Attendance Summary",
+      "subtitle": "Aggregate attendance by date range"
     },
     "admin": {
       "title": "System Admin",
@@ -164,6 +167,9 @@
     "lotRecord": "Lot Logs",
     "workSummary": "Work Summary",
     "statsToday": "Today's Stats",
+    "attendanceSummary": "Attendance Summary",
+    "attendanceTable": "Attendance Table",
+    "attendanceCharts": "Attendance Charts",
     "databaseSettings": "Database Settings",
     "systemSettings": "System Settings",
     "delayList": "Delay List",
@@ -181,13 +187,34 @@
     "issues": "⚠️ Key Issues:",
     "countermeasures": "✅ Countermeasures:"
   },
+  "summaryDashboard": {
+    "startDate": "Start Date",
+    "endDate": "End Date",
+    "confirm": "Confirm",
+    "hint": "Select a date range and click confirm to generate results",
+    "missingRange": "Please select both start and end dates.",
+    "invalidRange": "End date cannot be earlier than start date.",
+    "loadFailed": "Failed to load summary: {error}",
+    "regularPresent": "Regular Present",
+    "regularAbsent": "Regular Absent",
+    "contractPresent": "Contract Present",
+    "contractAbsent": "Contract Absent",
+    "present": "Present",
+    "absent": "Absent",
+    "rateLineTitle": "Attendance Rate Trend",
+    "rateAxis": "Attendance Rate (%)",
+    "rateSeries": "Attendance Rate",
+    "countChartTitle": "Attendance Count",
+    "countAxis": "Attendance Count"
+  },
   "actions": {
     "saveDailyReport": "💾 Save Report",
     "resetDailyReport": "🔄 Reset",
     "addEquipment": "➕ Add Record",
     "viewEquipmentHistory": "📋 View History",
     "addLot": "➕ Add Lot",
-    "viewLotList": "📋 View List"
+    "viewLotList": "📋 View List",
+    "saveBasicInfo": "💾 Save Basic Info"
   },
   "status": {
     "ready": "Ready",
@@ -200,7 +227,12 @@
     "lotListLoading": "📋 Loading lot list...",
     "imageSelected": "📷 Image selected: {filename}",
     "dailySaved": "💾 Daily report saved",
-    "dailyReset": "🔄 Daily report reset"
+    "dailyReset": "🔄 Daily report reset",
+    "basicInfoSaved": "✅ Basic information saved",
+    "basicInfoSavedDetail": "Basic information saved (Report ID: {report_id})",
+    "basicInfoSaveFailed": "Failed to save basic information: {error}",
+    "basicInfoLocked": "⚠️ Please save basic information first",
+    "attendanceSaved": "✅ Attendance saved"
   },
   "settings": {
     "databasePath": "Database Path:",
@@ -218,13 +250,20 @@
     "unitItems": "items"
   },
   "auth": {
-    "not_logged_in": "Not signed in",
+    "not_logged_in": "Not logged in",
     "logged_in_as": "👤 {username} ({role})",
-    "loginUnavailable": "Login is temporarily unavailable"
+    "loginUnavailable": "Login is temporarily unavailable",
+    "loginMissing": "Please enter username and password.",
+    "loginFailed": "Invalid username or password.",
+    "loginFailedDetail": "Login failed: {error}",
+    "loginRequiredTitle": "Login required",
+    "loginRequiredBody": "Please log in before saving the report."
   },
   "attendance": {
     "regular_staff": "Regular Staff",
     "contractor_staff": "Contractor Staff",
+    "regular_short": "Regular",
+    "contractor_short": "Contract",
     "validate": "Validate Data",
     "statistics": "Statistics",
     "rate": "Attendance Rate",
@@ -245,7 +284,9 @@
     "validation_success": "Validation Success",
     "invalid_numbers": "Please enter valid numbers",
     "saved": "Attendance saved",
-    "records": "Attendance Records"
+    "records": "Attendance Records",
+    "loadFailed": "Failed to load attendance data: {error}",
+    "saveFailed": "Failed to save attendance data: {error}"
   },
   "equipment": {
     "equipId": "Equipment ID",
@@ -255,7 +296,13 @@
     "input": "Equipment Input",
     "logs": "Equipment Logs",
     "requireFields": "Equipment ID and description are required",
-    "recordAdded": "Equipment log added"
+    "recordAdded": "Equipment log added",
+    "missingRequired": "Please enter equipment ID and description.",
+    "invalidImpactQty": "Impact quantity must be a number.",
+    "saveFailed": "Failed to save equipment record: {error}",
+    "loadFailed": "Failed to load equipment records: {error}",
+    "noHistory": "No equipment records for this report.",
+    "historyTitle": "Equipment Records"
   },
   "lot": {
     "lotId": "Lot ID",
@@ -264,12 +311,44 @@
     "input": "Lot Input",
     "logs": "Lot Logs",
     "requireFields": "Lot ID and description are required",
-    "recordAdded": "Lot log added"
+    "recordAdded": "Lot log added",
+    "missingRequired": "Please enter lot ID and description.",
+    "saveFailed": "Failed to save lot record: {error}",
+    "loadFailed": "Failed to load lot records: {error}",
+    "noHistory": "No lot records for this report.",
+    "historyTitle": "Lot Records"
   },
   "admin": {
     "userManagement": "User Management",
     "addEditUser": "Add/Edit User",
     "userList": "User List",
+    "resetPassword": "Reset Password",
+    "tabMasterData": "🧩 Shift & Area",
+    "shiftManagement": "Shift Management",
+    "areaManagement": "Area Management",
+    "loadOptionsFailed": "Failed to load shift/area options: {error}",
+    "shiftNameRequired": "Shift name is required",
+    "shiftNameExists": "Shift name already exists",
+    "shiftAdded": "Shift added",
+    "shiftUpdated": "Shift updated",
+    "shiftDeleted": "Shift deleted",
+    "shiftNotFound": "Shift not found",
+    "shiftSaveFailed": "Failed to save shift: {error}",
+    "shiftDeleteFailed": "Failed to delete shift: {error}",
+    "selectShiftToUpdate": "Please select a shift",
+    "selectShiftToDelete": "Please select a shift",
+    "confirmDeleteShift": "Delete this shift?",
+    "areaNameRequired": "Area name is required",
+    "areaNameExists": "Area name already exists",
+    "areaAdded": "Area added",
+    "areaUpdated": "Area updated",
+    "areaDeleted": "Area deleted",
+    "areaNotFound": "Area not found",
+    "areaSaveFailed": "Failed to save area: {error}",
+    "areaDeleteFailed": "Failed to delete area: {error}",
+    "selectAreaToUpdate": "Please select an area",
+    "selectAreaToDelete": "Please select an area",
+    "confirmDeleteArea": "Delete this area?",
     "requiredFields": "Username and password are required",
     "userCreated": "User created",
     "selectUserToUpdate": "Select a user to update",
@@ -334,8 +413,8 @@
     "night": "Night"
   },
   "delay": {
-    "startDate": "Start Date YYYY-MM-DD",
-    "endDate": "End Date YYYY-MM-DD",
+    "startDate": "Start date",
+    "endDate": "End date",
     "importExcel": "Import Delay Excel",
     "confirmUpload": "Confirm Upload",
     "refresh": "Refresh",
@@ -355,8 +434,8 @@
     "importPending": "Imported. Please confirm before upload."
   },
   "summaryActual": {
-    "startDate": "Filter Start YYYY-MM-DD",
-    "endDate": "Filter End YYYY-MM-DD",
+    "startDate": "Start date",
+    "endDate": "End date",
     "importExcel": "Import Summary Actual",
     "confirmUpload": "Confirm Upload",
     "clear": "Clear View",
@@ -375,5 +454,20 @@
   "context.currentReport": "Current report: Date {date} | Shift {shift} | Area {area}",
   "context.unknown": "Not set",
   "context.missingTitle": "Daily report not set",
-  "context.missingBody": "Please set the date, shift, and area in Daily Report before continuing."
+  "context.missingBody": "Please set the date, shift, and area in Daily Report before continuing.",
+  "context": {
+    "currentReport": "Current report: Date {date} | Shift {shift} | Area {area}",
+    "unknown": "Not set",
+    "basicInfoRequiredTitle": "Basic information not saved",
+    "basicInfoRequiredBody": "Please save date, shift, and area in Daily Report before using other functions."
+  },
+  "calendar": {
+    "mon": "Mon",
+    "tue": "Tue",
+    "wed": "Wed",
+    "thu": "Thu",
+    "fri": "Fri",
+    "sat": "Sat",
+    "sun": "Sun"
+  }
 }

@@ -4,7 +4,9 @@
 """
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
+from datetime import datetime
 import json
+from models import SessionLocal, ShiftOption, AreaOption
 
 
 class UserManagementSection:
@@ -33,32 +35,36 @@ class UserManagementSection:
         self.main_frame = ttk.LabelFrame(self.parent, text="使用者管理", padding="10")
         
         # 輸入框架
-        input_frame = ttk.LabelFrame(self.main_frame, text="新增/編輯使用者", padding="5")
-        input_frame.grid(row=0, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 10))
+        self.input_frame = ttk.LabelFrame(self.main_frame, text="新增/編輯使用者", padding="5")
+        self.input_frame.grid(row=0, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 10))
         
         # 使用者名稱
-        ttk.Label(input_frame, text="使用者名稱:").grid(row=0, column=0, sticky=tk.W, padx=(0, 5), pady=2)
+        self.username_label = ttk.Label(self.input_frame, text="使用者名稱:")
+        self.username_label.grid(row=0, column=0, sticky=tk.W, padx=(0, 5), pady=2)
         self.username_var = tk.StringVar()
-        username_entry = ttk.Entry(input_frame, textvariable=self.username_var, width=20)
+        username_entry = ttk.Entry(self.input_frame, textvariable=self.username_var, width=20)
         username_entry.grid(row=0, column=1, sticky=tk.W, pady=2)
         
         # 電子郵件
-        ttk.Label(input_frame, text="電子郵件:").grid(row=0, column=2, sticky=tk.W, padx=(10, 5), pady=2)
+        self.email_label = ttk.Label(self.input_frame, text="電子郵件:")
+        self.email_label.grid(row=0, column=2, sticky=tk.W, padx=(10, 5), pady=2)
         self.email_var = tk.StringVar()
-        email_entry = ttk.Entry(input_frame, textvariable=self.email_var, width=30)
+        email_entry = ttk.Entry(self.input_frame, textvariable=self.email_var, width=30)
         email_entry.grid(row=0, column=3, sticky=tk.W, pady=2)
         
         # 密碼
-        ttk.Label(input_frame, text="密碼:").grid(row=1, column=0, sticky=tk.W, padx=(0, 5), pady=2)
+        self.password_label = ttk.Label(self.input_frame, text="密碼:")
+        self.password_label.grid(row=1, column=0, sticky=tk.W, padx=(0, 5), pady=2)
         self.password_var = tk.StringVar()
-        password_entry = ttk.Entry(input_frame, textvariable=self.password_var, width=20, show="*")
+        password_entry = ttk.Entry(self.input_frame, textvariable=self.password_var, width=20, show="*")
         password_entry.grid(row=1, column=1, sticky=tk.W, pady=2)
         
         # 角色
-        ttk.Label(input_frame, text="角色:").grid(row=1, column=2, sticky=tk.W, padx=(10, 5), pady=2)
+        self.role_label = ttk.Label(self.input_frame, text="角色:")
+        self.role_label.grid(row=1, column=2, sticky=tk.W, padx=(10, 5), pady=2)
         self.role_var = tk.StringVar(value="user")
         role_combo = ttk.Combobox(
-            input_frame,
+            self.input_frame,
             textvariable=self.role_var,
             values=["user", "admin"],
             state="readonly",
@@ -67,7 +73,7 @@ class UserManagementSection:
         role_combo.grid(row=1, column=3, sticky=tk.W, pady=2)
         
         # 按鈕框架
-        button_frame = ttk.Frame(input_frame)
+        button_frame = ttk.Frame(self.input_frame)
         button_frame.grid(row=2, column=0, columnspan=4, pady=5)
         
         # 新增按鈕
@@ -114,12 +120,12 @@ class UserManagementSection:
         self.reset_button.pack(side=tk.LEFT, padx=(10, 0))
         
         # 使用者列表框架
-        list_frame = ttk.LabelFrame(self.main_frame, text="使用者列表", padding="5")
-        list_frame.grid(row=1, column=0, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(0, 10))
+        self.list_frame = ttk.LabelFrame(self.main_frame, text="使用者列表", padding="5")
+        self.list_frame.grid(row=1, column=0, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S), pady=(0, 10))
         
         # 創建表格
         columns = ("ID", "Username", "Email", "Role", "Active", "Created At")
-        self.tree = ttk.Treeview(list_frame, columns=columns, show="headings", height=8)
+        self.tree = ttk.Treeview(self.list_frame, columns=columns, show="headings", height=8)
         
         # 定義表頭
         headers = {
@@ -143,7 +149,7 @@ class UserManagementSection:
                 self.tree.column(col, width=100)
         
         # 滾動條
-        scrollbar = ttk.Scrollbar(list_frame, orient=tk.VERTICAL, command=self.tree.yview)
+        scrollbar = ttk.Scrollbar(self.list_frame, orient=tk.VERTICAL, command=self.tree.yview)
         self.tree.configure(yscrollcommand=scrollbar.set)
         
         self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
@@ -163,23 +169,16 @@ class UserManagementSection:
         self.list_frame.config(text=self.lang_manager.get_text("admin.userList", "使用者列表"))
         
         # 更新標籤文本
-        labels = self.input_frame.grid_slaves()
-        for label in reversed(labels):
-            if isinstance(label, tk.Label):
-                text = label.cget("text")
-                if text == "使用者名稱:":
-                    label.config(text=f"{self.lang_manager.get_text('common.username', '使用者名稱')}:")
-                elif text == "電子郵件:":
-                    label.config(text=f"{self.lang_manager.get_text('common.email', '電子郵件')}:")
-                elif text == "密碼:":
-                    label.config(text=f"{self.lang_manager.get_text('common.password', '密碼')}:")
-                elif text == "角色:":
-                    label.config(text=f"{self.lang_manager.get_text('common.role', '角色')}:")
+        self.username_label.config(text=f"{self.lang_manager.get_text('common.username', '使用者名稱')}:")
+        self.email_label.config(text=f"{self.lang_manager.get_text('common.email', '電子郵件')}:")
+        self.password_label.config(text=f"{self.lang_manager.get_text('common.password', '密碼')}:")
+        self.role_label.config(text=f"{self.lang_manager.get_text('common.role', '角色')}:")
         
         # 更新按鈕文本
         self.create_button.config(text=self.lang_manager.get_text("common.create", "新增"))
         self.update_button.config(text=self.lang_manager.get_text("common.update", "更新"))
         self.delete_button.config(text=self.lang_manager.get_text("common.delete", "刪除"))
+        self.reset_password_btn.config(text=self.lang_manager.get_text("admin.resetPassword", "重設密碼"))
         self.reset_button.config(text=self.lang_manager.get_text("common.reset", "重置"))
         
         # 更新表格標頭
@@ -383,6 +382,413 @@ class UserManagementSection:
         self.delete_button.config(state=tk.DISABLED)
         self.reset_password_btn.config(state=tk.DISABLED)
 
+    def get_widget(self):
+        """獲取組件主框架"""
+        return self.main_frame
+
+
+class MasterDataSection:
+    """
+    班別/區域管理介面
+    """
+
+    def __init__(self, parent, lang_manager, on_change=None):
+        self.parent = parent
+        self.lang_manager = lang_manager
+        self.on_change = on_change
+        self.selected_shift_id = None
+        self.selected_area_id = None
+        self.setup_ui()
+        self.load_data()
+
+    def setup_ui(self):
+        self.main_frame = ttk.Frame(self.parent)
+
+        container = ttk.Frame(self.main_frame)
+        container.pack(fill="both", expand=True, padx=10, pady=10)
+        container.columnconfigure(0, weight=1)
+        container.columnconfigure(1, weight=1)
+
+        # 班別管理
+        self.shift_frame = ttk.LabelFrame(container, text="班別管理", padding="10")
+        self.shift_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
+        self.shift_frame.columnconfigure(1, weight=1)
+
+        self.shift_name_label = ttk.Label(self.shift_frame, text="班別名稱:")
+        self.shift_name_label.grid(row=0, column=0, sticky="w", pady=2)
+        self.shift_name_var = tk.StringVar()
+        ttk.Entry(self.shift_frame, textvariable=self.shift_name_var, width=20).grid(
+            row=0, column=1, sticky="ew", pady=2
+        )
+
+        shift_btn_frame = ttk.Frame(self.shift_frame)
+        shift_btn_frame.grid(row=1, column=0, columnspan=2, pady=(6, 4))
+
+        self.shift_add_btn = ttk.Button(shift_btn_frame, text="新增", command=self.add_shift)
+        self.shift_add_btn.pack(side=tk.LEFT, padx=(0, 6))
+        self.shift_update_btn = ttk.Button(
+            shift_btn_frame, text="更新", command=self.update_shift, state=tk.DISABLED
+        )
+        self.shift_update_btn.pack(side=tk.LEFT, padx=(0, 6))
+        self.shift_delete_btn = ttk.Button(
+            shift_btn_frame, text="刪除", command=self.delete_shift, state=tk.DISABLED
+        )
+        self.shift_delete_btn.pack(side=tk.LEFT)
+
+        self.shift_tree = ttk.Treeview(
+            self.shift_frame, columns=("ID", "Name"), show="headings", height=8
+        )
+        self.shift_tree.heading("ID", text="ID")
+        self.shift_tree.heading("Name", text="班別")
+        self.shift_tree.column("ID", width=60, anchor="center")
+        self.shift_tree.column("Name", width=160, anchor="w")
+        self.shift_tree.grid(row=2, column=0, columnspan=2, sticky="nsew", pady=(6, 0))
+        self.shift_tree.bind("<<TreeviewSelect>>", self.on_shift_select)
+
+        shift_scroll = ttk.Scrollbar(self.shift_frame, orient=tk.VERTICAL, command=self.shift_tree.yview)
+        self.shift_tree.configure(yscrollcommand=shift_scroll.set)
+        shift_scroll.grid(row=2, column=2, sticky="ns")
+
+        # 區域管理
+        self.area_frame = ttk.LabelFrame(container, text="區域管理", padding="10")
+        self.area_frame.grid(row=0, column=1, sticky="nsew")
+        self.area_frame.columnconfigure(1, weight=1)
+
+        self.area_name_label = ttk.Label(self.area_frame, text="區域名稱:")
+        self.area_name_label.grid(row=0, column=0, sticky="w", pady=2)
+        self.area_name_var = tk.StringVar()
+        ttk.Entry(self.area_frame, textvariable=self.area_name_var, width=20).grid(
+            row=0, column=1, sticky="ew", pady=2
+        )
+
+        area_btn_frame = ttk.Frame(self.area_frame)
+        area_btn_frame.grid(row=1, column=0, columnspan=2, pady=(6, 4))
+
+        self.area_add_btn = ttk.Button(area_btn_frame, text="新增", command=self.add_area)
+        self.area_add_btn.pack(side=tk.LEFT, padx=(0, 6))
+        self.area_update_btn = ttk.Button(
+            area_btn_frame, text="更新", command=self.update_area, state=tk.DISABLED
+        )
+        self.area_update_btn.pack(side=tk.LEFT, padx=(0, 6))
+        self.area_delete_btn = ttk.Button(
+            area_btn_frame, text="刪除", command=self.delete_area, state=tk.DISABLED
+        )
+        self.area_delete_btn.pack(side=tk.LEFT)
+
+        self.area_tree = ttk.Treeview(
+            self.area_frame, columns=("ID", "Name"), show="headings", height=8
+        )
+        self.area_tree.heading("ID", text="ID")
+        self.area_tree.heading("Name", text="區域")
+        self.area_tree.column("ID", width=60, anchor="center")
+        self.area_tree.column("Name", width=180, anchor="w")
+        self.area_tree.grid(row=2, column=0, columnspan=2, sticky="nsew", pady=(6, 0))
+        self.area_tree.bind("<<TreeviewSelect>>", self.on_area_select)
+
+        area_scroll = ttk.Scrollbar(self.area_frame, orient=tk.VERTICAL, command=self.area_tree.yview)
+        self.area_tree.configure(yscrollcommand=area_scroll.set)
+        area_scroll.grid(row=2, column=2, sticky="ns")
+
+        self.update_ui_language()
+
+    def get_widget(self):
+        return self.main_frame
+
+    def load_data(self):
+        for tree in (self.shift_tree, self.area_tree):
+            for item in tree.get_children():
+                tree.delete(item)
+        try:
+            with SessionLocal() as db:
+                shifts = db.query(ShiftOption).order_by(ShiftOption.id).all()
+                areas = db.query(AreaOption).order_by(AreaOption.id).all()
+            for shift in shifts:
+                self.shift_tree.insert("", "end", values=(shift.id, shift.name))
+            for area in areas:
+                self.area_tree.insert("", "end", values=(area.id, area.name))
+        except Exception as exc:
+            messagebox.showerror(
+                self.lang_manager.get_text("common.error", "錯誤"),
+                self.lang_manager.get_text("admin.loadOptionsFailed", "讀取班別/區域選項失敗：{error}").format(error=exc)
+            )
+
+    def update_ui_language(self):
+        self.shift_frame.config(text=self.lang_manager.get_text("admin.shiftManagement", "班別管理"))
+        self.area_frame.config(text=self.lang_manager.get_text("admin.areaManagement", "區域管理"))
+        self.shift_name_label.config(text=f"{self.lang_manager.get_text('common.shiftName', '班別名稱')}:")
+        self.area_name_label.config(text=f"{self.lang_manager.get_text('common.areaName', '區域名稱')}:")
+        self.shift_add_btn.config(text=self.lang_manager.get_text("common.create", "新增"))
+        self.shift_update_btn.config(text=self.lang_manager.get_text("common.update", "更新"))
+        self.shift_delete_btn.config(text=self.lang_manager.get_text("common.delete", "刪除"))
+        self.area_add_btn.config(text=self.lang_manager.get_text("common.create", "新增"))
+        self.area_update_btn.config(text=self.lang_manager.get_text("common.update", "更新"))
+        self.area_delete_btn.config(text=self.lang_manager.get_text("common.delete", "刪除"))
+        self.shift_tree.heading("ID", text=self.lang_manager.get_text("common.id", "ID"))
+        self.shift_tree.heading("Name", text=self.lang_manager.get_text("common.shift", "班別"))
+        self.area_tree.heading("ID", text=self.lang_manager.get_text("common.id", "ID"))
+        self.area_tree.heading("Name", text=self.lang_manager.get_text("common.area", "區域"))
+
+    def on_shift_select(self, _event):
+        sel = self.shift_tree.selection()
+        if not sel:
+            self.shift_update_btn.config(state=tk.DISABLED)
+            self.shift_delete_btn.config(state=tk.DISABLED)
+            self.selected_shift_id = None
+            return
+        values = self.shift_tree.item(sel[0], "values")
+        self.selected_shift_id = int(values[0])
+        self.shift_name_var.set(values[1])
+        self.shift_update_btn.config(state=tk.NORMAL)
+        self.shift_delete_btn.config(state=tk.NORMAL)
+
+    def on_area_select(self, _event):
+        sel = self.area_tree.selection()
+        if not sel:
+            self.area_update_btn.config(state=tk.DISABLED)
+            self.area_delete_btn.config(state=tk.DISABLED)
+            self.selected_area_id = None
+            return
+        values = self.area_tree.item(sel[0], "values")
+        self.selected_area_id = int(values[0])
+        self.area_name_var.set(values[1])
+        self.area_update_btn.config(state=tk.NORMAL)
+        self.area_delete_btn.config(state=tk.NORMAL)
+
+    def add_shift(self):
+        name = self.shift_name_var.get().strip()
+        if not name:
+            messagebox.showwarning(
+                self.lang_manager.get_text("common.error", "錯誤"),
+                self.lang_manager.get_text("admin.shiftNameRequired", "班別名稱不可為空")
+            )
+            return
+        try:
+            with SessionLocal() as db:
+                if db.query(ShiftOption).filter_by(name=name).first():
+                    messagebox.showwarning(
+                        self.lang_manager.get_text("common.error", "錯誤"),
+                        self.lang_manager.get_text("admin.shiftNameExists", "班別名稱已存在")
+                    )
+                    return
+                db.add(ShiftOption(name=name))
+                db.commit()
+            self.shift_name_var.set("")
+            self.load_data()
+            self._notify_change()
+            messagebox.showinfo(
+                self.lang_manager.get_text("common.success", "成功"),
+                self.lang_manager.get_text("admin.shiftAdded", "已新增班別")
+            )
+        except Exception as exc:
+            messagebox.showerror(
+                self.lang_manager.get_text("common.error", "錯誤"),
+                self.lang_manager.get_text("admin.shiftSaveFailed", "班別儲存失敗：{error}").format(error=exc)
+            )
+
+    def update_shift(self):
+        if not self.selected_shift_id:
+            messagebox.showwarning(
+                self.lang_manager.get_text("common.error", "錯誤"),
+                self.lang_manager.get_text("admin.selectShiftToUpdate", "請先選擇班別")
+            )
+            return
+        name = self.shift_name_var.get().strip()
+        if not name:
+            messagebox.showwarning(
+                self.lang_manager.get_text("common.error", "錯誤"),
+                self.lang_manager.get_text("admin.shiftNameRequired", "班別名稱不可為空")
+            )
+            return
+        try:
+            with SessionLocal() as db:
+                option = db.query(ShiftOption).filter_by(id=self.selected_shift_id).first()
+                if not option:
+                    messagebox.showerror(
+                        self.lang_manager.get_text("common.error", "錯誤"),
+                        self.lang_manager.get_text("admin.shiftNotFound", "找不到班別")
+                    )
+                    return
+                duplicate = db.query(ShiftOption).filter(ShiftOption.name == name, ShiftOption.id != option.id).first()
+                if duplicate:
+                    messagebox.showwarning(
+                        self.lang_manager.get_text("common.error", "錯誤"),
+                        self.lang_manager.get_text("admin.shiftNameExists", "班別名稱已存在")
+                    )
+                    return
+                option.name = name
+                db.commit()
+            self.load_data()
+            self._notify_change()
+            messagebox.showinfo(
+                self.lang_manager.get_text("common.success", "成功"),
+                self.lang_manager.get_text("admin.shiftUpdated", "班別已更新")
+            )
+        except Exception as exc:
+            messagebox.showerror(
+                self.lang_manager.get_text("common.error", "錯誤"),
+                self.lang_manager.get_text("admin.shiftSaveFailed", "班別儲存失敗：{error}").format(error=exc)
+            )
+
+    def delete_shift(self):
+        if not self.selected_shift_id:
+            messagebox.showwarning(
+                self.lang_manager.get_text("common.error", "錯誤"),
+                self.lang_manager.get_text("admin.selectShiftToDelete", "請先選擇班別")
+            )
+            return
+        if not messagebox.askyesno(
+            self.lang_manager.get_text("common.confirm", "確認"),
+            self.lang_manager.get_text("admin.confirmDeleteShift", "確定刪除該班別？")
+        ):
+            return
+        try:
+            with SessionLocal() as db:
+                option = db.query(ShiftOption).filter_by(id=self.selected_shift_id).first()
+                if not option:
+                    messagebox.showerror(
+                        self.lang_manager.get_text("common.error", "錯誤"),
+                        self.lang_manager.get_text("admin.shiftNotFound", "找不到班別")
+                    )
+                    return
+                db.delete(option)
+                db.commit()
+            self.selected_shift_id = None
+            self.shift_name_var.set("")
+            self.shift_update_btn.config(state=tk.DISABLED)
+            self.shift_delete_btn.config(state=tk.DISABLED)
+            self.load_data()
+            self._notify_change()
+            messagebox.showinfo(
+                self.lang_manager.get_text("common.success", "成功"),
+                self.lang_manager.get_text("admin.shiftDeleted", "班別已刪除")
+            )
+        except Exception as exc:
+            messagebox.showerror(
+                self.lang_manager.get_text("common.error", "錯誤"),
+                self.lang_manager.get_text("admin.shiftDeleteFailed", "班別刪除失敗：{error}").format(error=exc)
+            )
+
+    def add_area(self):
+        name = self.area_name_var.get().strip()
+        if not name:
+            messagebox.showwarning(
+                self.lang_manager.get_text("common.error", "錯誤"),
+                self.lang_manager.get_text("admin.areaNameRequired", "區域名稱不可為空")
+            )
+            return
+        try:
+            with SessionLocal() as db:
+                if db.query(AreaOption).filter_by(name=name).first():
+                    messagebox.showwarning(
+                        self.lang_manager.get_text("common.error", "錯誤"),
+                        self.lang_manager.get_text("admin.areaNameExists", "區域名稱已存在")
+                    )
+                    return
+                db.add(AreaOption(name=name))
+                db.commit()
+            self.area_name_var.set("")
+            self.load_data()
+            self._notify_change()
+            messagebox.showinfo(
+                self.lang_manager.get_text("common.success", "成功"),
+                self.lang_manager.get_text("admin.areaAdded", "已新增區域")
+            )
+        except Exception as exc:
+            messagebox.showerror(
+                self.lang_manager.get_text("common.error", "錯誤"),
+                self.lang_manager.get_text("admin.areaSaveFailed", "區域儲存失敗：{error}").format(error=exc)
+            )
+
+    def update_area(self):
+        if not self.selected_area_id:
+            messagebox.showwarning(
+                self.lang_manager.get_text("common.error", "錯誤"),
+                self.lang_manager.get_text("admin.selectAreaToUpdate", "請先選擇區域")
+            )
+            return
+        name = self.area_name_var.get().strip()
+        if not name:
+            messagebox.showwarning(
+                self.lang_manager.get_text("common.error", "錯誤"),
+                self.lang_manager.get_text("admin.areaNameRequired", "區域名稱不可為空")
+            )
+            return
+        try:
+            with SessionLocal() as db:
+                option = db.query(AreaOption).filter_by(id=self.selected_area_id).first()
+                if not option:
+                    messagebox.showerror(
+                        self.lang_manager.get_text("common.error", "錯誤"),
+                        self.lang_manager.get_text("admin.areaNotFound", "找不到區域")
+                    )
+                    return
+                duplicate = db.query(AreaOption).filter(AreaOption.name == name, AreaOption.id != option.id).first()
+                if duplicate:
+                    messagebox.showwarning(
+                        self.lang_manager.get_text("common.error", "錯誤"),
+                        self.lang_manager.get_text("admin.areaNameExists", "區域名稱已存在")
+                    )
+                    return
+                option.name = name
+                db.commit()
+            self.load_data()
+            self._notify_change()
+            messagebox.showinfo(
+                self.lang_manager.get_text("common.success", "成功"),
+                self.lang_manager.get_text("admin.areaUpdated", "區域已更新")
+            )
+        except Exception as exc:
+            messagebox.showerror(
+                self.lang_manager.get_text("common.error", "錯誤"),
+                self.lang_manager.get_text("admin.areaSaveFailed", "區域儲存失敗：{error}").format(error=exc)
+            )
+
+    def delete_area(self):
+        if not self.selected_area_id:
+            messagebox.showwarning(
+                self.lang_manager.get_text("common.error", "錯誤"),
+                self.lang_manager.get_text("admin.selectAreaToDelete", "請先選擇區域")
+            )
+            return
+        if not messagebox.askyesno(
+            self.lang_manager.get_text("common.confirm", "確認"),
+            self.lang_manager.get_text("admin.confirmDeleteArea", "確定刪除該區域？")
+        ):
+            return
+        try:
+            with SessionLocal() as db:
+                option = db.query(AreaOption).filter_by(id=self.selected_area_id).first()
+                if not option:
+                    messagebox.showerror(
+                        self.lang_manager.get_text("common.error", "錯誤"),
+                        self.lang_manager.get_text("admin.areaNotFound", "找不到區域")
+                    )
+                    return
+                db.delete(option)
+                db.commit()
+            self.selected_area_id = None
+            self.area_name_var.set("")
+            self.area_update_btn.config(state=tk.DISABLED)
+            self.area_delete_btn.config(state=tk.DISABLED)
+            self.load_data()
+            self._notify_change()
+            messagebox.showinfo(
+                self.lang_manager.get_text("common.success", "成功"),
+                self.lang_manager.get_text("admin.areaDeleted", "區域已刪除")
+            )
+        except Exception as exc:
+            messagebox.showerror(
+                self.lang_manager.get_text("common.error", "錯誤"),
+                self.lang_manager.get_text("admin.areaDeleteFailed", "區域刪除失敗：{error}").format(error=exc)
+            )
+
+    def _notify_change(self):
+        if callable(self.on_change):
+            try:
+                self.on_change()
+            except Exception:
+                pass
+
 
 class TranslationManagementSection:
     """
@@ -414,7 +820,8 @@ class TranslationManagementSection:
         toolbar.grid(row=0, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 10))
         
         # 語言選擇
-        ttk.Label(toolbar, text="選擇語言:").pack(side=tk.LEFT, padx=(0, 5))
+        self.toolbar_lang_label = ttk.Label(toolbar, text="選擇語言:")
+        self.toolbar_lang_label.pack(side=tk.LEFT, padx=(0, 5))
         self.selected_language_var = tk.StringVar()
         lang_combo = ttk.Combobox(
             toolbar,
@@ -426,28 +833,30 @@ class TranslationManagementSection:
         lang_combo.pack(side=tk.LEFT, padx=(0, 10))
         
         # 命名空間
-        ttk.Label(toolbar, text="命名空間:").pack(side=tk.LEFT, padx=(0, 5))
+        self.toolbar_namespace_label = ttk.Label(toolbar, text="命名空間:")
+        self.toolbar_namespace_label.pack(side=tk.LEFT, padx=(0, 5))
         self.namespace_var = tk.StringVar(value="common")
         namespace_entry = ttk.Entry(toolbar, textvariable=self.namespace_var, width=15)
         namespace_entry.pack(side=tk.LEFT, padx=(0, 10))
         
         # 匯入按鈕
-        import_btn = ttk.Button(toolbar, text="匯入翻譯", command=self.import_translations)
-        import_btn.pack(side=tk.RIGHT, padx=(5, 0))
+        self.import_btn = ttk.Button(toolbar, text="匯入翻譯", command=self.import_translations)
+        self.import_btn.pack(side=tk.RIGHT, padx=(5, 0))
         
         # 匯出按鈕
-        export_btn = ttk.Button(toolbar, text="匯出翻譯", command=self.export_translations)
-        export_btn.pack(side=tk.RIGHT)
+        self.export_btn = ttk.Button(toolbar, text="匯出翻譯", command=self.export_translations)
+        self.export_btn.pack(side=tk.RIGHT)
         
         # 輸入框架
-        input_frame = ttk.LabelFrame(self.main_frame, text="新增/編輯翻譯", padding="5")
-        input_frame.grid(row=1, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 10))
+        self.input_frame = ttk.LabelFrame(self.main_frame, text="新增/編輯翻譯", padding="5")
+        self.input_frame.grid(row=1, column=0, columnspan=2, sticky=(tk.W, tk.E), pady=(0, 10))
         
         # 語言代碼
-        ttk.Label(input_frame, text="語言代碼:").grid(row=0, column=0, sticky=tk.W, padx=(0, 5), pady=2)
+        self.resource_lang_label = ttk.Label(self.input_frame, text="語言代碼:")
+        self.resource_lang_label.grid(row=0, column=0, sticky=tk.W, padx=(0, 5), pady=2)
         self.resource_lang_var = tk.StringVar(value="ja")
         lang_combo2 = ttk.Combobox(
-            input_frame,
+            self.input_frame,
             textvariable=self.resource_lang_var,
             values=["ja", "zh", "en"],
             state="readonly",
@@ -456,25 +865,28 @@ class TranslationManagementSection:
         lang_combo2.grid(row=0, column=1, sticky=tk.W, pady=2)
         
         # 資源鍵
-        ttk.Label(input_frame, text="資源鍵:").grid(row=0, column=2, sticky=tk.W, padx=(10, 5), pady=2)
+        self.resource_key_label = ttk.Label(self.input_frame, text="資源鍵:")
+        self.resource_key_label.grid(row=0, column=2, sticky=tk.W, padx=(10, 5), pady=2)
         self.resource_key_var = tk.StringVar()
-        key_entry = ttk.Entry(input_frame, textvariable=self.resource_key_var, width=30)
+        key_entry = ttk.Entry(self.input_frame, textvariable=self.resource_key_var, width=30)
         key_entry.grid(row=0, column=3, sticky=tk.W, pady=2)
         
         # 資源值
-        ttk.Label(input_frame, text="資源值:").grid(row=1, column=0, sticky=tk.W, padx=(0, 5), pady=2)
+        self.resource_value_label = ttk.Label(self.input_frame, text="資源值:")
+        self.resource_value_label.grid(row=1, column=0, sticky=tk.W, padx=(0, 5), pady=2)
         self.resource_value_var = tk.StringVar()
-        value_entry = ttk.Entry(input_frame, textvariable=self.resource_value_var, width=80)
+        value_entry = ttk.Entry(self.input_frame, textvariable=self.resource_value_var, width=80)
         value_entry.grid(row=1, column=1, columnspan=3, sticky=tk.W, pady=2)
         
         # 命名空間
-        ttk.Label(input_frame, text="命名空間:").grid(row=2, column=0, sticky=tk.W, padx=(0, 5), pady=2)
+        self.resource_namespace_label = ttk.Label(self.input_frame, text="命名空間:")
+        self.resource_namespace_label.grid(row=2, column=0, sticky=tk.W, padx=(0, 5), pady=2)
         self.resource_namespace_var = tk.StringVar(value="common")
-        namespace_entry2 = ttk.Entry(input_frame, textvariable=self.resource_namespace_var, width=30)
+        namespace_entry2 = ttk.Entry(self.input_frame, textvariable=self.resource_namespace_var, width=30)
         namespace_entry2.grid(row=2, column=1, columnspan=2, sticky=tk.W, pady=2)
         
         # 按鈕框架
-        button_frame = ttk.Frame(input_frame)
+        button_frame = ttk.Frame(self.input_frame)
         button_frame.grid(row=3, column=0, columnspan=4, pady=5)
         
         # 新增按鈕
@@ -512,12 +924,12 @@ class TranslationManagementSection:
         self.reset_resource_btn.pack(side=tk.LEFT)
         
         # 翻譯資源表格
-        table_frame = ttk.LabelFrame(self.main_frame, text="翻譯資源", padding="5")
-        table_frame.grid(row=2, column=0, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S))
+        self.table_frame = ttk.LabelFrame(self.main_frame, text="翻譯資源", padding="5")
+        self.table_frame.grid(row=2, column=0, columnspan=2, sticky=(tk.W, tk.E, tk.N, tk.S))
         
         # 創建表格
         columns = ("ID", "Language", "Key", "Value", "Namespace", "Updated At")
-        self.resource_tree = ttk.Treeview(table_frame, columns=columns, show="headings", height=12)
+        self.resource_tree = ttk.Treeview(self.table_frame, columns=columns, show="headings", height=12)
         
         # 定義表頭
         headers = {
@@ -539,7 +951,7 @@ class TranslationManagementSection:
                 self.resource_tree.column(col, width=80)
         
         # 滾動條
-        scrollbar = ttk.Scrollbar(table_frame, orient=tk.VERTICAL, command=self.resource_tree.yview)
+        scrollbar = ttk.Scrollbar(self.table_frame, orient=tk.VERTICAL, command=self.resource_tree.yview)
         self.resource_tree.configure(yscrollcommand=scrollbar.set)
         
         self.resource_tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
@@ -557,19 +969,14 @@ class TranslationManagementSection:
         self.main_frame.config(text=self.lang_manager.get_text("admin.translationManagement", "翻譯資源管理"))
         self.input_frame.config(text=self.lang_manager.get_text("admin.addEditTranslation", "新增/編輯翻譯"))
         self.table_frame.config(text=self.lang_manager.get_text("admin.translationResources", "翻譯資源"))
+        self.toolbar_lang_label.config(text=f"{self.lang_manager.get_text('common.language', '語言')}:")
+        self.toolbar_namespace_label.config(text=f"{self.lang_manager.get_text('common.namespace', '命名空間')}:")
         
         # 更新標籤文本
-        for child in self.input_frame.winfo_children():
-            if isinstance(child, tk.Label):
-                text = child.cget("text")
-                if text == "語言代碼:":
-                    child.config(text=f"{self.lang_manager.get_text('common.languageCode', '語言代碼')}:")
-                elif text == "資源鍵:":
-                    child.config(text=f"{self.lang_manager.get_text('common.resourceKey', '資源鍵')}:")
-                elif text == "資源值:":
-                    child.config(text=f"{self.lang_manager.get_text('common.resourceValue', '資源值')}:")
-                elif text == "命名空間:":
-                    child.config(text=f"{self.lang_manager.get_text('common.namespace', '命名空間')}:")
+        self.resource_lang_label.config(text=f"{self.lang_manager.get_text('common.languageCode', '語言代碼')}:")
+        self.resource_key_label.config(text=f"{self.lang_manager.get_text('common.resourceKey', '資源鍵')}:")
+        self.resource_value_label.config(text=f"{self.lang_manager.get_text('common.resourceValue', '資源值')}:")
+        self.resource_namespace_label.config(text=f"{self.lang_manager.get_text('common.namespace', '命名空間')}:")
         
         # 更新按鈕文本
         self.add_resource_btn.config(text=self.lang_manager.get_text("common.add", "新增"))
