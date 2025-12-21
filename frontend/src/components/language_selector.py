@@ -29,7 +29,10 @@ class LanguageSelector:
         self.frame = ttk.Frame(parent)
         
         # 標籤
-        self.label = ttk.Label(self.frame, text="語言/Language/言語:")
+        self.label_key = "header.languageSwitch"
+        self.label_default = "語言切換"
+        label_text = f"{self.lang_manager.get_text(self.label_key, self.label_default)}:"
+        self.label = ttk.Label(self.frame, text=label_text)
         self.label.pack(side=tk.LEFT, padx=(0, 5))
         
         # 語言選項 - 顯示完整的語言名稱而非代碼
@@ -81,6 +84,11 @@ class LanguageSelector:
     def get_widget(self):
         """獲取組件主框架"""
         return self.frame
+
+    def update_text(self):
+        """更新語言選擇器標籤文字"""
+        label_text = f"{self.lang_manager.get_text(self.label_key, self.label_default)}:"
+        self.label.config(text=label_text)
 
     def update_language_display(self, lang_code):
         """更新語言選擇器的顯示"""

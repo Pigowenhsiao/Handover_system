@@ -7,78 +7,53 @@ import sys
 from pathlib import Path
 
 
-def check_backend_core_components():
-    """檢查後端核心組件"""
-    print("檢查後端核心組件...")
-    
-    # 檢查配置文件
-    config_path = "backend/core/config.py"
-    if os.path.exists(config_path):
-        print("✓ 後端配置文件存在")
-    else:
-        print("✗ 後端配置文件不存在")
-    
-    # 檢查安全模塊
-    security_path = "backend/core/security.py"
-    if os.path.exists(security_path):
-        print("✓ 後端安全模塊存在")
-    else:
-        print("✗ 後端安全模塊不存在")
-    
-    # 檢查數據庫相關文件
-    db_files = [
-        "backend/database/base.py",
-        "backend/database/session.py",
-        "backend/database/init_db.py"
+def check_core_components():
+    """檢查桌面版核心組件"""
+    print("檢查核心組件...")
+
+    core_files = [
+        "app.py",
+        "auth.py",
+        "models.py",
+        "language_manager.py",
+        "requirements.txt",
     ]
-    
-    for db_file in db_files:
-        if os.path.exists(db_file):
-            print(f"✓ {db_file} 存在")
+
+    for core_file in core_files:
+        if os.path.exists(core_file):
+            print(f"✓ {core_file} 存在")
         else:
-            print(f"✗ {db_file} 不存在")
+            print(f"✗ {core_file} 不存在")
 
 
 def check_frontend_components():
-    """檢查前端組件"""
-    print("\n檢查前端組件...")
-    
-    # 檢查前端語言管理器
-    frontend_lang_path = "frontend/i18n/language_manager.py"
-    if os.path.exists(frontend_lang_path):
-        print("✓ 前端語言管理器存在")
-    else:
-        print("✗ 前端語言管理器不存在")
-    
-    # 檢查前端語言選擇器
-    lang_selector_path = "frontend/src/components/language_selector.py"
-    if os.path.exists(lang_selector_path):
-        print("✓ 語言選擇器組件存在")
-    else:
-        print("✗ 語言選擇器組件不存在")
-    
-    # 檢查前端出勤記錄組件
-    attendance_path = "frontend/src/components/attendance_section.py"
-    if os.path.exists(attendance_path):
-        print("✓ 出勤記錄組件存在")
-    else:
-        print("✗ 出勤記錄組件不存在")
-    
-    # 檢查前端主應用程式
-    main_path = "frontend/main.py"
-    if os.path.exists(main_path):
-        print("✓ 前端主應用程式存在")
-    else:
-        print("✗ 前端主應用程式不存在")
+    """檢查前端目錄（若存在）"""
+    print("\n檢查前端目錄...")
+
+    frontend_dir = "frontend"
+    if not os.path.exists(frontend_dir):
+        print("ℹ 前端目錄不存在（僅使用 app.py）")
+        return
+
+    frontend_files = [
+        "frontend/main.py",
+        "frontend/src/components/language_selector.py",
+        "frontend/src/components/attendance_section.py",
+    ]
+
+    for frontend_file in frontend_files:
+        if os.path.exists(frontend_file):
+            print(f"✓ {frontend_file} 存在")
+        else:
+            print(f"✗ {frontend_file} 不存在")
 
 
-def check_models_and_schemas():
-    """檢查數據模型和架構"""
-    print("\n檢查數據模型和架構...")
+def check_models():
+    """檢查資料模型"""
+    print("\n檢查資料模型...")
 
-    # 檢查後端模型
     model_paths = [
-        "backend/models/all_models.py"
+        "models.py",
     ]
 
     for model_path in model_paths:
@@ -86,43 +61,6 @@ def check_models_and_schemas():
             print(f"✓ {model_path} 存在")
         else:
             print(f"✗ {model_path} 不存在")
-
-    # 檢查後端架構
-    schema_paths = [
-        "backend/schemas/user.py",
-        "backend/schemas/report.py",
-        "backend/schemas/attendance.py",
-        "backend/schemas/equipment.py",
-        "backend/schemas/lot.py",
-        "backend/schemas/language.py"
-    ]
-
-    for schema_path in schema_paths:
-        if os.path.exists(schema_path):
-            print(f"✓ {schema_path} 存在")
-        else:
-            print(f"✗ {schema_path} 不存在")
-
-
-def check_api_endpoints():
-    """檢查 API 端點"""
-    print("\n檢查 API 端點...")
-    
-    endpoint_paths = [
-        "backend/api/v1/endpoints/auth.py",
-        "backend/api/v1/endpoints/users.py",
-        "backend/api/v1/endpoints/reports.py",
-        "backend/api/v1/endpoints/attendance.py",
-        "backend/api/v1/endpoints/equipment.py",
-        "backend/api/v1/endpoints/lots.py",
-        "backend/api/v1/endpoints/languages.py"
-    ]
-    
-    for endpoint_path in endpoint_paths:
-        if os.path.exists(endpoint_path):
-            print(f"✓ {endpoint_path} 存在")
-        else:
-            print(f"✗ {endpoint_path} 不存在")
 
 
 def check_spec_documents():
@@ -167,10 +105,9 @@ def main():
     print("電子交接系統功能實現檢查報告")
     print("="*50)
     
-    check_backend_core_components()
+    check_core_components()
     check_frontend_components()
-    check_models_and_schemas()
-    check_api_endpoints()
+    check_models()
     check_spec_documents()
     check_language_resources()
     

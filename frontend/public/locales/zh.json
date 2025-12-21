@@ -3,13 +3,24 @@
     "title": "電子交接系統",
     "languageSwitch": "語言切換",
     "login": "登入",
-    "logout": "登出"
+    "logout": "登出",
+    "subtitle": "交接管理系統",
+    "version": "版本 2.0"
   },
   "navigation": {
     "home": "首頁",
     "reports": "報表",
     "settings": "設定",
-    "admin": "管理"
+    "admin": "系統管理",
+    "menuTitle": "導航選單",
+    "dailyReport": "日報表",
+    "attendance": "出勤記錄",
+    "equipment": "設備異常",
+    "lot": "異常批次",
+    "summary": "總結",
+    "masterData": "基本資料管理",
+    "delayList": "延遲清單",
+    "summaryActual": "Summary Actual"
   },
   "common": {
     "save": "儲存",
@@ -37,7 +48,47 @@
     "date": "日期",
     "shift": "班別",
     "area": "區域",
-    "author": "填寫者"
+    "author": "填寫者",
+    "description": "異常內容",
+    "notes": "特記事項",
+    "image": "異常圖片",
+    "browse": "瀏覽...",
+    "selectImage": "選擇圖片",
+    "imageUpload": "圖片上傳",
+    "id": "ID",
+    "email": "電子郵件",
+    "role": "角色",
+    "active": "啟用",
+    "createdAt": "建立時間",
+    "languageCode": "語言代碼",
+    "language": "語言",
+    "resourceKey": "資源鍵",
+    "resourceValue": "資源值",
+    "namespace": "命名空間",
+    "updatedAt": "更新時間",
+    "import": "匯入",
+    "export": "匯出",
+    "invalidNumber": "數字格式無效",
+    "operationFailed": "操作失敗",
+    "updateFailed": "更新失敗",
+    "username": "使用者名稱",
+    "password": "密碼",
+    "equipmentLogs": "設備異常記錄",
+    "lotId": "批號",
+    "unsupportedFormat": "不支援的文件格式",
+    "add": "新增",
+    "areaName": "區域名稱",
+    "basicInfo": "基本資訊",
+    "confirmQuit": "確定要離開嗎？",
+    "equipment": "設備異常",
+    "invalidNumbers": "請輸入有效數字",
+    "lots": "異常批次",
+    "quit": "離開",
+    "summary": "總結",
+    "selectSheet": "選擇工作表",
+    "emptyData": "查無資料",
+    "uploadSuccess": "上傳成功",
+    "selectRow": "請先選擇一列"
   },
   "reports": {
     "title": "日報表",
@@ -55,7 +106,13 @@
     "password": "密碼",
     "rememberMe": "記住我",
     "forgotPassword": "忘記密碼？",
-    "signIn": "登入"
+    "signIn": "登入",
+    "connectError": "無法連接到後端伺服器。",
+    "failed": "登入失敗",
+    "incorrect": "使用者名稱或密碼錯誤。",
+    "welcome": "歡迎, {username}",
+    "welcome_generic": "歡迎",
+    "welcome_offline": "歡迎 (離線)"
   },
   "errors": {
     "requiredField": "此為必填欄位",
@@ -63,6 +120,260 @@
     "networkError": "網路錯誤",
     "serverError": "伺服器錯誤",
     "unauthorized": "未授權",
-    "notFound": "找不到頁面"
-  }
+    "notFound": "找不到頁面",
+    "invalidDateFormat": "日期格式需為 YYYY-MM-DD"
+  },
+  "pages": {
+    "dailyReport": {
+      "title": "日報表",
+      "subtitle": "記錄每日生產交接資訊"
+    },
+    "attendance": {
+      "title": "出勤記錄",
+      "subtitle": "記錄正社員與契約社員出勤資訊"
+    },
+    "equipment": {
+      "title": "設備異常",
+      "subtitle": "記錄設備異常與處理資訊"
+    },
+    "lot": {
+      "title": "異常批次",
+      "subtitle": "記錄批次異常與處置狀況"
+    },
+    "summary": {
+      "title": "總結",
+      "subtitle": "記錄每日總結與分析"
+    },
+    "admin": {
+      "title": "系統管理",
+      "subtitle": "管理使用者、翻譯資源與系統設定"
+    },
+    "delayList": {
+      "title": "延遲清單",
+      "subtitle": "延遲清單匯入與查詢"
+    },
+    "summaryActual": {
+      "title": "Summary Actual",
+      "subtitle": "Summary Actual 匯入與查詢"
+    }
+  },
+  "cards": {
+    "dateShift": "日期與班別資訊",
+    "basicSummary": "基本資訊與摘要",
+    "equipmentRecord": "設備異常記錄",
+    "lotRecord": "異常批次記錄",
+    "workSummary": "工作總結",
+    "statsToday": "今日統計",
+    "databaseSettings": "資料庫設定",
+    "systemSettings": "系統設定",
+    "delayList": "延遲清單",
+    "delayListTable": "延遲清單資料",
+    "summaryActual": "Summary Actual",
+    "summaryActualTable": "Summary Actual 資料"
+  },
+  "fields": {
+    "date": "📅 日期:",
+    "shift": "⏰ 班別:",
+    "area": "🏭 區域:"
+  },
+  "summary": {
+    "keyOutput": "🔑 Key Machine Output:",
+    "issues": "⚠️ Key Issues:",
+    "countermeasures": "✅ Countermeasures:"
+  },
+  "actions": {
+    "saveDailyReport": "💾 儲存日報",
+    "resetDailyReport": "🔄 重置",
+    "addEquipment": "➕ 添加記錄",
+    "viewEquipmentHistory": "📋 查看歷史",
+    "addLot": "➕ 添加批次",
+    "viewLotList": "📋 批次列表"
+  },
+  "status": {
+    "ready": "就緒",
+    "languageChanged": "🌐 語言已切換至: {language}",
+    "loginSuccess": "✅ 登入成功",
+    "loggedOut": "✅ 已登出",
+    "equipmentAdded": "✅ 設備異常記錄已添加",
+    "equipmentHistoryLoading": "📋 正在載入設備異常歷史...",
+    "lotAdded": "✅ 批次異常記錄已添加",
+    "lotListLoading": "📋 正在載入批次異常列表...",
+    "imageSelected": "📷 已選擇圖片: {filename}",
+    "dailySaved": "💾 日報已儲存",
+    "dailyReset": "🔄 日報表單已重置"
+  },
+  "settings": {
+    "databasePath": "資料庫路徑:",
+    "autoBackup": "啟用自動備份",
+    "backupInterval": "備份間隔:",
+    "days": "天"
+  },
+  "stats": {
+    "dailyReports": "今日報表",
+    "avgAttendance": "平均出勤率",
+    "equipmentIssues": "設備異常",
+    "lotIssues": "批次異常",
+    "unitReports": "份",
+    "unitPercent": "%",
+    "unitItems": "件"
+  },
+  "auth": {
+    "not_logged_in": "未登入",
+    "logged_in_as": "👤 {username} ({role})",
+    "loginUnavailable": "登入功能暫時無法使用"
+  },
+  "attendance": {
+    "regular_staff": "正社員 (Regular Staff)",
+    "contractor_staff": "契約社員 (Contractor Staff)",
+    "validate": "驗證數據",
+    "statistics": "統計",
+    "rate": "出勤率",
+    "info": "💡 提示：出勤率 = 出勤人數 ÷ 定員人數 × 100%",
+    "total_scheduled": "總定員:",
+    "total_present": "總出勤:",
+    "total_absent": "總欠勤:",
+    "overall_rate": "整體出勤率:",
+    "unsaved": "⚠️ 未儲存",
+    "error_regular_exceeds": "正社員：出勤({present}) + 欠勤({absent}) > 定員({scheduled})",
+    "error_regular_negative": "正社員：人數不能為負數",
+    "error_contractor_exceeds": "契約社員：出勤({present}) + 欠勤({absent}) > 定員({scheduled})",
+    "error_contractor_negative": "契約社員：人數不能為負數",
+    "validation_summary_intro": "✅ 所有出勤數據輸入合理。",
+    "validation_summary_regular": "正社員: 定員 {scheduled}, 出勤 {present}, 欠勤 {absent}, 出勤率 {rate:.1f}%",
+    "validation_summary_contractor": "契約社員: 定員 {scheduled}, 出勤 {present}, 欠勤 {absent}, 出勤率 {rate:.1f}%",
+    "validation_failed": "驗證失敗",
+    "validation_success": "驗證成功",
+    "invalid_numbers": "請確保輸入的都是有效數字",
+    "saved": "出勤數據已儲存",
+    "records": "出勤記錄"
+  },
+  "equipment": {
+    "equipId": "設備號碼",
+    "startTime": "發生時刻",
+    "impactQty": "影響數量",
+    "actionTaken": "對應內容",
+    "input": "設備異常輸入",
+    "logs": "設備異常記錄",
+    "requireFields": "設備ID和異常內容是必填字段",
+    "recordAdded": "設備異常記錄已添加"
+  },
+  "lot": {
+    "lotId": "批號",
+    "status": "處置狀況",
+    "notes": "特記事項",
+    "input": "異常批次輸入",
+    "logs": "異常批次記錄",
+    "requireFields": "批號和異常內容是必填字段",
+    "recordAdded": "異常批次記錄已添加"
+  },
+  "admin": {
+    "userManagement": "使用者管理",
+    "addEditUser": "新增/編輯使用者",
+    "userList": "使用者列表",
+    "requiredFields": "使用者名稱和密碼是必填字段",
+    "userCreated": "使用者已創建",
+    "selectUserToUpdate": "請先選擇要更新的使用者",
+    "userUpdated": "使用者已更新",
+    "selectUserToDelete": "請先選擇要刪除的使用者",
+    "confirmDeleteUser": "確定要刪除此使用者嗎？",
+    "userDeleted": "使用者已刪除",
+    "selectUserToResetPassword": "請先選擇要重設密碼的使用者",
+    "confirmResetPassword": "確定要重設使用者 '{username}' 的密碼嗎？",
+    "passwordChanged": "密碼已成功變更",
+    "passwordResetSuccess": "使用者 '{username}' 的密碼已重設",
+    "passwordResetFailed": "重設密碼失敗",
+    "translationManagement": "翻譯資源管理",
+    "addEditTranslation": "新增/編輯翻譯",
+    "translationResources": "翻譯資源",
+    "resourceAdded": "翻譯資源已新增",
+    "selectResourceToUpdate": "請先選擇要更新的翻譯資源",
+    "resourceUpdated": "翻譯資源已更新",
+    "selectResourceToDelete": "請先選擇要刪除的翻譯資源",
+    "confirmDeleteResource": "確定要刪除此翻譯資源嗎？",
+    "resourceDeleted": "翻譯資源已刪除",
+    "selectJsonFile": "選擇 JSON 文件",
+    "resourcesImported": "翻譯資源已匯入",
+    "importFailed": "匯入失敗",
+    "saveJsonFile": "保存 JSON 文件",
+    "resourcesExported": "翻譯資源已匯出",
+    "exportFailed": "匯出失敗",
+    "tabUsers": "👥 使用者管理",
+    "tabTranslations": "🌐 翻譯管理",
+    "tabSettings": "⚙️ 系統設定"
+  },
+  "password": {
+    "change_title": "變更密碼",
+    "current": "當前密碼",
+    "new": "新密碼",
+    "confirm": "確認新密碼",
+    "show": "顯示密碼",
+    "requirements": "密碼要求:",
+    "req_length": "至少 8 個字元",
+    "req_uppercase": "包含大寫字母",
+    "req_lowercase": "包含小寫字母",
+    "req_number": "包含數字",
+    "req_special": "包含特殊字元 (!@#$%^&*(),.?:{}|<>)",
+    "suggestions": "建議:",
+    "strength": "密碼強度",
+    "strength_weak": "弱",
+    "strength_medium": "中等",
+    "strength_strong": "強",
+    "strength_very_strong": "非常強",
+    "error_current_required": "請輸入當前密碼",
+    "error_new_required": "請輸入新密碼",
+    "error_confirm_required": "請確認新密碼",
+    "error_mismatch": "新密碼與確認密碼不符",
+    "error_same": "新密碼不能與當前密碼相同",
+    "error_strength": "新密碼不符合安全要求:",
+    "success": "密碼變更成功！",
+    "change": "變更密碼",
+    "strength_error_title": "密碼強度不足"
+  },
+  "shift": {
+    "day": "白班",
+    "night": "夜班"
+  },
+  "delay": {
+    "startDate": "起日 YYYY-MM-DD",
+    "endDate": "迄日 YYYY-MM-DD",
+    "importExcel": "匯入延遲Excel",
+    "confirmUpload": "確認上傳",
+    "refresh": "重新整理",
+    "clear": "清除畫面",
+    "date": "日期",
+    "time": "時間",
+    "reactor": "設備",
+    "process": "製程",
+    "lot": "批號",
+    "wafer": "晶圓",
+    "progress": "進行中",
+    "prevSteps": "前站",
+    "prevTime": "前站時間",
+    "severity": "嚴重度",
+    "action": "對應內容",
+    "note": "備註",
+    "importPending": "匯入完成，請確認後再點上傳"
+  },
+  "summaryActual": {
+    "startDate": "日期篩選起日 YYYY-MM-DD",
+    "endDate": "日期篩選迄日 YYYY-MM-DD",
+    "importExcel": "匯入 Summary Actual",
+    "confirmUpload": "確認上傳",
+    "clear": "清除畫面",
+    "date": "日期",
+    "label": "標籤",
+    "plan": "Plan",
+    "completed": "Completed",
+    "inProcess": "In Process",
+    "onTrack": "On Track",
+    "atRisk": "At Risk",
+    "delayed": "Delayed",
+    "noData": "No Data",
+    "scrapped": "Scrapped",
+    "importPending": "匯入完成，請確認後再點上傳"
+  },
+  "context.currentReport": "目前日報：日期 {date}｜班別 {shift}｜區域 {area}",
+  "context.unknown": "未設定",
+  "context.missingTitle": "尚未設定日報表",
+  "context.missingBody": "請先在日報表設定日期、班別、區域後再繼續。"
 }

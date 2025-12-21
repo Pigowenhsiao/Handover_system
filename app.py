@@ -167,6 +167,21 @@ TEXTS: Dict[str, Dict[str, str]] = {
     "export_equip_title": {"ja": "設備レポート出力", "en": "Export Equipment Report", "zh": "匯出設備報表"},
     "export_lot_title": {"ja": "LOTレポート出力", "en": "Export LOT Report", "zh": "匯出 LOT 報表"},
     "choose_image": {"ja": "画像選択", "en": "Choose Image", "zh": "選擇圖片"},
+    "select_sheet": {"ja": "シート選択", "en": "Select Sheet", "zh": "選擇工作表"},
+    "ok": {"ja": "OK", "en": "OK", "zh": "確定"},
+    "import_hint_title": {"ja": "インポート", "en": "Import", "zh": "匯入"},
+    "import_hint_body": {"ja": "指定形式の完成後に提供します。", "en": "Import will be available after the format is finalized.", "zh": "匯入功能將依指定格式完成後提供。"},
+    "load_existing_success": {"ja": "既存データを読み込みました。編集後に保存できます。", "en": "Loaded existing data. You can edit and save.", "zh": "已載入舊資料，可修改後存檔。"},
+    "load_existing_fail": {"ja": "読み込み失敗：{error}", "en": "Load failed: {error}", "zh": "載入失敗：{error}"},
+    "load_options_fail": {"ja": "シフト/エリアの読み込み失敗：{error}", "en": "Failed to load shift/area options: {error}", "zh": "讀取班別/區域選項失敗：{error}"},
+    "dialog_add_equip": {"ja": "設備異常の追加", "en": "Add Equipment Issue", "zh": "新增設備異常"},
+    "dialog_add_lot": {"ja": "異常LOTの追加", "en": "Add Abnormal Lot", "zh": "新增異常批次"},
+    "dialog_edit_att": {"ja": "出勤編集", "en": "Edit Attendance", "zh": "出勤編輯"},
+    "equip_image_path": {"ja": "画像ファイルパス", "en": "Image File Path", "zh": "圖片檔路徑"},
+    "att_negative": {"ja": "出勤 {row} 行 {field} は負の値にできません", "en": "Attendance row {row} {field} cannot be negative", "zh": "出勤第 {row} 列 {field} 不可為負數"},
+    "att_not_number": {"ja": "出勤 {row} 行 {field} は数値で入力してください", "en": "Attendance row {row} {field} must be a number", "zh": "出勤第 {row} 列 {field} 需為數字"},
+    "equip_negative": {"ja": "設備異常 {row} 行の影響数量は負の値にできません", "en": "Equipment row {row} impact qty cannot be negative", "zh": "設備異常第 {row} 列影響數量不可為負數"},
+    "equip_not_number": {"ja": "設備異常 {row} 行の影響数量は数値で入力してください", "en": "Equipment row {row} impact qty must be a number", "zh": "設備異常第 {row} 列影響數量需為數字"},
     "dialog_add_equip": {"ja": "設備異常の追加", "en": "Add Equipment Issue", "zh": "新增設備異常"},
     "dialog_add_lot": {"ja": "異常LOTの追加", "en": "Add Abnormal LOT", "zh": "新增異常 LOT"},
     "dialog_edit_att": {"ja": "出勤の編集", "en": "Edit Attendance", "zh": "編輯出勤"},
@@ -398,7 +413,7 @@ class HandoverApp(tk.Tk):
                 self.shift_options = [s.name for s in db.query(ShiftOption).order_by(ShiftOption.id).all()]
                 self.area_options = [a.name for a in db.query(AreaOption).order_by(AreaOption.id).all()]
         except Exception as exc:
-            messagebox.showerror("錯誤", f"讀取班別/區域選項失敗：{exc}")
+            messagebox.showerror(self._t("error"), self._t("load_options_fail").format(error=exc))
             self.shift_options = ["Day", "Night"]
             self.area_options = ["etching_D", "etching_E"]
 
@@ -1153,7 +1168,7 @@ class HandoverApp(tk.Tk):
             if len(xls.sheet_names) > 1:
                 picker = tk.Toplevel(self)
                 picker.title(self._t("tab_delay"))
-                ttk.Label(picker, text="Select sheet").pack(padx=10, pady=5)
+                ttk.Label(picker, text=self._t("select_sheet")).pack(padx=10, pady=5)
                 sheet_var = tk.StringVar(value=xls.sheet_names[0])
                 combo = ttk.Combobox(picker, textvariable=sheet_var, values=xls.sheet_names, state="readonly")
                 combo.pack(padx=10, pady=5)
@@ -1163,7 +1178,7 @@ class HandoverApp(tk.Tk):
                     chosen["name"] = sheet_var.get()
                     picker.destroy()
 
-                ttk.Button(picker, text="OK", command=confirm).pack(pady=8)
+                ttk.Button(picker, text=self._t("ok"), command=confirm).pack(pady=8)
                 picker.grab_set()
                 picker.wait_window()
                 sheet_name = chosen["name"]
@@ -1877,7 +1892,7 @@ class HandoverApp(tk.Tk):
 
         att_btns = ttk.Frame(att_frame)
         att_btns.pack(side="right", padx=5, pady=5)
-        ttk.Button(att_btns, text="編輯", command=self._edit_selected_attendance).pack(fill="x", pady=2)
+        ttk.Button(att_btns, text=self._t("edit"), command=self._edit_selected_attendance).pack(fill="x", pady=2)
 
         # Equipment logs
         equip_frame = ttk.LabelFrame(self.daily_scroll, text=self._t("equipment"))
@@ -1956,7 +1971,7 @@ class HandoverApp(tk.Tk):
             action_frame.columnconfigure(i, weight=1)
 
     def _import_placeholder(self) -> None:
-        messagebox.showinfo("匯入", "匯入功能將依指定格式完成後提供。")
+        messagebox.showinfo(self._t("import_hint_title"), self._t("import_hint_body"))
 
     def _clear_form(self) -> None:
         self.current_report_id = None
@@ -2026,20 +2041,28 @@ class HandoverApp(tk.Tk):
                 self.summary_key.insert("1.0", report.summary_key_output)
                 self.summary_issues.insert("1.0", report.summary_issues)
                 self.summary_counter.insert("1.0", report.summary_countermeasures)
-                messagebox.showinfo(self._t("success"), "已載入舊資料，可修改後存檔。")
+                messagebox.showinfo(self._t("success"), self._t("load_existing_success"))
         except Exception as exc:
-            messagebox.showerror(self._t("error"), f"載入失敗：{exc}")
+            messagebox.showerror(self._t("error"), self._t("load_existing_fail").format(error=exc))
 
     def _add_equipment_dialog(self) -> None:
         dialog = tk.Toplevel(self)
-        dialog.title("新增設備異常")
+        dialog.title(self._t("dialog_add_equip"))
+        dialog.columnconfigure(1, weight=1)
         entries: Dict[str, tk.Entry] = {}
-        labels = ["設備番号", "異常內容", "發生時刻", "影響數量", "對應內容", "圖片檔路徑"]
+        labels = [
+            self._t("equip_id"),
+            self._t("equip_desc"),
+            self._t("equip_start"),
+            self._t("equip_impact"),
+            self._t("equip_action"),
+            self._t("equip_image_path"),
+        ]
         keys = ["equip_id", "description", "start_time", "impact_qty", "action_taken", "image_path"]
         for i, (lbl, key) in enumerate(zip(labels, keys)):
             ttk.Label(dialog, text=lbl).grid(row=i, column=0, padx=5, pady=5, sticky="e")
             ent = ttk.Entry(dialog, width=40)
-            ent.grid(row=i, column=1, padx=5, pady=5)
+            ent.grid(row=i, column=1, padx=5, pady=5, sticky="ew")
             entries[key] = ent
 
         def select_image() -> None:
@@ -2048,24 +2071,25 @@ class HandoverApp(tk.Tk):
                 entries["image_path"].delete(0, tk.END)
                 entries["image_path"].insert(0, path)
 
-        ttk.Button(dialog, text="選擇圖片", command=select_image).grid(row=5, column=2, padx=5, pady=5)
+        ttk.Button(dialog, text=self._t("choose_image"), command=select_image).grid(row=5, column=2, padx=5, pady=5)
 
         def confirm() -> None:
             values = [entries[k].get() for k in keys]
             self.equip_tree.insert("", "end", values=values)
             dialog.destroy()
 
-        ttk.Button(dialog, text="新增", command=confirm).grid(row=6, column=0, columnspan=3, pady=10)
+        ttk.Button(dialog, text=self._t("add"), command=confirm).grid(row=6, column=0, columnspan=3, pady=10)
 
     def _add_lot_dialog(self) -> None:
         dialog = tk.Toplevel(self)
-        dialog.title("新增異常批次")
-        labels = ["批號", "異常內容", "處置狀況", "特記事項"]
+        dialog.title(self._t("dialog_add_lot"))
+        dialog.columnconfigure(1, weight=1)
+        labels = [self._t("lot_id_col"), self._t("lot_desc"), self._t("lot_status"), self._t("lot_notes")]
         entries: List[tk.Entry] = []
         for i, lbl in enumerate(labels):
             ttk.Label(dialog, text=lbl).grid(row=i, column=0, padx=5, pady=5, sticky="e")
             ent = ttk.Entry(dialog, width=40)
-            ent.grid(row=i, column=1, padx=5, pady=5)
+            ent.grid(row=i, column=1, padx=5, pady=5, sticky="ew")
             entries.append(ent)
 
         def confirm() -> None:
@@ -2073,7 +2097,7 @@ class HandoverApp(tk.Tk):
             self.lot_tree.insert("", "end", values=values)
             dialog.destroy()
 
-        ttk.Button(dialog, text="新增", command=confirm).grid(row=4, column=0, columnspan=2, pady=10)
+        ttk.Button(dialog, text=self._t("add"), command=confirm).grid(row=4, column=0, columnspan=2, pady=10)
 
     def _collect_attendance(self) -> List[Dict[str, str]]:
         data = []
@@ -2145,14 +2169,21 @@ class HandoverApp(tk.Tk):
         while len(vals) < 5:
             vals.append("")
         dialog = tk.Toplevel(self)
-        dialog.title("出勤編輯")
-        labels = ["分類", "定員", "出勤", "欠勤", "理由"]
+        dialog.title(self._t("dialog_edit_att"))
+        dialog.columnconfigure(1, weight=1)
+        labels = [
+            self._t("att_category"),
+            self._t("att_scheduled"),
+            self._t("att_present"),
+            self._t("att_absent"),
+            self._t("att_reason"),
+        ]
         entries: List[tk.Entry] = []
         for i, (lbl, val) in enumerate(zip(labels, vals)):
             ttk.Label(dialog, text=lbl).grid(row=i, column=0, padx=5, pady=5, sticky="e")
             ent = ttk.Entry(dialog, width=30)
             ent.insert(0, val)
-            ent.grid(row=i, column=1, padx=5, pady=5)
+            ent.grid(row=i, column=1, padx=5, pady=5, sticky="ew")
             entries.append(ent)
 
         def confirm() -> None:
@@ -2163,7 +2194,7 @@ class HandoverApp(tk.Tk):
 
         btn_frame = ttk.Frame(dialog)
         btn_frame.grid(row=5, column=0, columnspan=2, pady=10)
-        ttk.Button(btn_frame, text="確定", command=confirm).pack(side="left", padx=5)
+        ttk.Button(btn_frame, text=self._t("ok"), command=confirm).pack(side="left", padx=5)
 
     def _collect_equipment(self) -> List[Dict[str, str]]:
         data = []
@@ -2205,6 +2236,11 @@ class HandoverApp(tk.Tk):
         attendance = self._collect_attendance()
         equipment = self._collect_equipment()
         lots = self._collect_lots()
+        field_labels = {
+            "scheduled_count": self._t("att_scheduled"),
+            "present_count": self._t("att_present"),
+            "absent_count": self._t("att_absent"),
+        }
 
         # Basic validation
         for idx, row in enumerate(attendance):
@@ -2212,21 +2248,27 @@ class HandoverApp(tk.Tk):
                 try:
                     val = int(row[field] or 0)
                     if val < 0:
-                        messagebox.showerror(self._t("error"), f"出勤第 {idx+1} 列 {field} 不可為負數")
+                        messagebox.showerror(
+                            self._t("error"),
+                            self._t("att_negative").format(row=idx + 1, field=field_labels.get(field, field)),
+                        )
                         return
                     row[field] = val
                 except ValueError:
-                    messagebox.showerror(self._t("error"), f"出勤第 {idx+1} 列 {field} 需為數字")
+                    messagebox.showerror(
+                        self._t("error"),
+                        self._t("att_not_number").format(row=idx + 1, field=field_labels.get(field, field)),
+                    )
                     return
         for idx, row in enumerate(equipment):
             try:
                 val = int(row["impact_qty"] or 0)
                 if val < 0:
-                    messagebox.showerror(self._t("error"), f"設備異常第 {idx+1} 列影響數量不可為負數")
+                    messagebox.showerror(self._t("error"), self._t("equip_negative").format(row=idx + 1))
                     return
                 row["impact_qty"] = val
             except ValueError:
-                messagebox.showerror(self._t("error"), f"設備異常第 {idx+1} 列影響數量需為數字")
+                messagebox.showerror(self._t("error"), self._t("equip_not_number").format(row=idx + 1))
                 return
 
         key_output = self.summary_key.get("1.0", tk.END).strip()

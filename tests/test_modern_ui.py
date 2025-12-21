@@ -87,7 +87,7 @@ def test_modern_ui_components():
     # 測試 5: 密碼管理功能
     print("\n5. 測試密碼管理功能...")
     try:
-        from backend.utils.password_validator import password_validator
+        from frontend.src.components.password_change_dialog import password_validator
         print("   ✅ 密碼驗證器導入成功")
         
         # 測試密碼強度
@@ -99,17 +99,6 @@ def test_modern_ui_components():
         print(f"   ✅ 強度評分功能: {score}分 ({level})")
     except Exception as e:
         print(f"   ❌ 密碼管理測試失敗: {e}")
-        return False
-    
-    # 測試 6: 後端架構
-    print("\n6. 測試後端架構...")
-    try:
-        from backend.schemas import Token, User, DailyReport
-        print("   ✅ Token 架構導入成功")
-        print("   ✅ User 架構導入成功")
-        print("   ✅ DailyReport 架構導入成功")
-    except Exception as e:
-        print(f"   ❌ 後端架構測試失敗: {e}")
         return False
     
     print("\n" + "=" * 60)

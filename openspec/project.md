@@ -11,7 +11,7 @@
 - 認證：bcrypt（本機密碼雜湊）
 - 資料處理：pandas、openpyxl（Excel 匯入）
 - 圖表：matplotlib（嵌入 Tkinter 顯示）
-- 測試/驗證：`verify_features.py`、`verify_implementation.py`，以及 `tests/`、`backend/tests/` 內的腳本
+- 測試/驗證：`verify_features.py`、`verify_implementation.py`，以及 `tests/` 內的腳本
 
 ## Project Conventions
 
@@ -29,7 +29,7 @@
 
 ### Testing Strategy
 - 以輕量驗證腳本為主：`verify_features.py`、`verify_implementation.py`。
-- 自動化測試以 `tests/` 與 `backend/tests/` 的腳本為主（含 UI/效能/安全/整合）。
+- 自動化測試以 `tests/` 的腳本為主（含 UI/效能/安全/整合）。
 - 手動功能檢查重點：多語切換、日報/報表流程、Excel 匯入與上傳、管理功能。
 - 無外部 CI；本機執行 Python 腳本與手動走查為主。
 

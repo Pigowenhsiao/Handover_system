@@ -4,32 +4,50 @@
 """
 import tkinter as tk
 from tkinter import ttk, messagebox
-import sys
-import os
+import re
 
-# 添加後端路徑
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..'))
 
-try:
-    from backend.utils.password_validator import password_validator
-except ImportError:
-    # 如果無法導入，提供本地備份
-    class LocalPasswordValidator:
-        @staticmethod
-        def validate_strength(password):
-            if len(password) < 6:
-                return False, ["密碼至少需要 6 個字元"]
-            return True, []
-        
-        @staticmethod
-        def get_strength_score(password):
-            return 50, "medium", "密碼強度中等"
-        
-        @staticmethod
-        def generate_suggestions(password):
-            return []
-    
-    password_validator = LocalPasswordValidator()
+class LocalPasswordValidator:
+    @staticmethod
+    def validate_strength(password):
+        errors = []
+        if len(password) < 8:
+            errors.append("密碼至少需要 8 個字元")
+        if not re.search(r"[A-Z]", password):
+            errors.append("需包含大寫字母")
+        if not re.search(r"[a-z]", password):
+            errors.append("需包含小寫字母")
+        if not re.search(r"[0-9]", password):
+            errors.append("需包含數字")
+        if not re.search(r"[!@#$%^&*(),.?:{}|<>]", password):
+            errors.append("需包含特殊字元")
+        return len(errors) == 0, errors
+
+    @staticmethod
+    def get_strength_score(password):
+        checks = [
+            len(password) >= 8,
+            bool(re.search(r"[A-Z]", password)),
+            bool(re.search(r"[a-z]", password)),
+            bool(re.search(r"[0-9]", password)),
+            bool(re.search(r"[!@#$%^&*(),.?:{}|<>]", password)),
+        ]
+        score = sum(checks) * 20
+        if score >= 80:
+            level, desc = "strong", "密碼強度強"
+        elif score >= 60:
+            level, desc = "medium", "密碼強度中等"
+        else:
+            level, desc = "weak", "密碼強度偏弱"
+        return score, level, desc
+
+    @staticmethod
+    def generate_suggestions(password):
+        _, errors = LocalPasswordValidator.validate_strength(password)
+        return errors
+
+
+password_validator = LocalPasswordValidator()
 
 
 class PasswordChangeDialog:
@@ -233,30 +251,48 @@ class PasswordChangeDialog:
         
         # 驗證輸入
         if not current_password:
-            messagebox.showerror("錯誤", self.lang_manager.get_text("password.error_current_required", "請輸入當前密碼"))
+            messagebox.showerror(
+                self.lang_manager.get_text("common.error", "錯誤"),
+                self.lang_manager.get_text("password.error_current_required", "請輸入當前密碼"),
+            )
             return
         
         if not new_password:
-            messagebox.showerror("錯誤", self.lang_manager.get_text("password.error_new_required", "請輸入新密碼"))
+            messagebox.showerror(
+                self.lang_manager.get_text("common.error", "錯誤"),
+                self.lang_manager.get_text("password.error_new_required", "請輸入新密碼"),
+            )
             return
         
         if not confirm_password:
-            messagebox.showerror("錯誤", self.lang_manager.get_text("password.error_confirm_required", "請確認新密碼"))
+            messagebox.showerror(
+                self.lang_manager.get_text("common.error", "錯誤"),
+                self.lang_manager.get_text("password.error_confirm_required", "請確認新密碼"),
+            )
             return
         
         if new_password != confirm_password:
-            messagebox.showerror("錯誤", self.lang_manager.get_text("password.error_mismatch", "新密碼與確認密碼不符"))
+            messagebox.showerror(
+                self.lang_manager.get_text("common.error", "錯誤"),
+                self.lang_manager.get_text("password.error_mismatch", "新密碼與確認密碼不符"),
+            )
             return
         
         if new_password == current_password:
-            messagebox.showerror("錯誤", self.lang_manager.get_text("password.error_same", "新密碼不能與當前密碼相同"))
+            messagebox.showerror(
+                self.lang_manager.get_text("common.error", "錯誤"),
+                self.lang_manager.get_text("password.error_same", "新密碼不能與當前密碼相同"),
+            )
             return
         
         # 驗證密碼強度
         is_valid, errors = password_validator.validate_strength(new_password)
         if not is_valid:
             error_msg = "\n".join(errors)
-            messagebox.showerror("密碼強度不足", f"{self.lang_manager.get_text('password.error_strength', '新密碼不符合安全要求:')}\n\n{error_msg}")
+            messagebox.showerror(
+                self.lang_manager.get_text("password.strength_error_title", "密碼強度不足"),
+                f"{self.lang_manager.get_text('password.error_strength', '新密碼不符合安全要求:')}\n\n{error_msg}",
+            )
             return
         
         # 這裡應該呼叫後端 API 來變更密碼
@@ -264,7 +300,7 @@ class PasswordChangeDialog:
         # TODO: 實際實施時需要連接到後端 API
         
         if messagebox.showinfo(
-            "成功",
+            self.lang_manager.get_text("common.success", "成功"),
             self.lang_manager.get_text("password.success", "密碼變更成功！"),
             icon="info"
         ):

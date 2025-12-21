@@ -34,6 +34,7 @@ class AttendanceSectionOptimized:
         # 追蹤數據變更狀態
         self.data_modified = False
         self.original_data = {}
+        self.staff_labels = {}
         
         # 創建界面
         self.setup_ui()
@@ -65,7 +66,10 @@ class AttendanceSectionOptimized:
         
         self.info_label = ttk.Label(
             info_frame,
-            text="💡 提示：出勤率 = 出勤人數 ÷ 定員人數 × 100%",
+            text=self.lang_manager.get_text(
+                "attendance.info",
+                "💡 提示：出勤率 = 出勤人數 ÷ 定員人數 × 100%"
+            ),
             font=("TkDefaultFont", 9, "italic"),
             foreground="gray"
         )
@@ -84,43 +88,43 @@ class AttendanceSectionOptimized:
         content_frame.pack(fill="both", expand=True)
         
         # 左側：正社員
-        left_frame = ttk.LabelFrame(
+        self.left_frame = ttk.LabelFrame(
             content_frame,
             text=self.lang_manager.get_text("attendance.regular_staff", "正社員 (Regular Staff)"),
             padding="15"
         )
-        left_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
+        self.left_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
         
         # 右側：契約社員
-        right_frame = ttk.LabelFrame(
+        self.right_frame = ttk.LabelFrame(
             content_frame,
             text=self.lang_manager.get_text("attendance.contractor_staff", "契約社員 (Contractor Staff)"),
             padding="15"
         )
-        right_frame.grid(row=0, column=1, sticky="nsew")
+        self.right_frame.grid(row=0, column=1, sticky="nsew")
         
         # 配置網格權重
         content_frame.columnconfigure(0, weight=1)
         content_frame.columnconfigure(1, weight=1)
         
         # 設置左側內容
-        self.setup_staff_section(left_frame, "regular")
+        self.setup_staff_section(self.left_frame, "regular")
         
         # 設置右側內容
-        self.setup_staff_section(right_frame, "contractor")
+        self.setup_staff_section(self.right_frame, "contractor")
         
         # 底部操作區
         action_frame = ttk.Frame(self.main_frame)
         action_frame.pack(fill="x", pady=(15, 0))
         
         # 左側：驗證按鈕
-        validate_btn = ttk.Button(
+        self.validate_btn = ttk.Button(
             action_frame,
             text=self.lang_manager.get_text("attendance.validate", "驗證數據"),
             command=self.validate_attendance_data,
             style="Accent.TButton"
         )
-        validate_btn.pack(side="left")
+        self.validate_btn.pack(side="left")
         
         # 中間：即時統計
         self.stats_frame = ttk.LabelFrame(action_frame, text=self.lang_manager.get_text("attendance.statistics", "統計"))
@@ -129,13 +133,13 @@ class AttendanceSectionOptimized:
         self.setup_statistics_section()
         
         # 右側：儲存按鈕
-        save_btn = ttk.Button(
+        self.save_btn = ttk.Button(
             action_frame,
             text=self.lang_manager.get_text("common.save", "儲存"),
             command=self.save_attendance_data,
             style="Save.TButton"
         )
-        save_btn.pack(side="right")
+        self.save_btn.pack(side="right")
         
         # 設定按鈕樣式
         try:
@@ -148,9 +152,8 @@ class AttendanceSectionOptimized:
     def setup_staff_section(self, parent, staff_type):
         """設置員工區段（正社員或契約社員）"""
         # 定員
-        ttk.Label(parent, text=f"{self.lang_manager.get_text('common.scheduled', '定員')}:").grid(
-            row=0, column=0, sticky="w", padx=(0, 10), pady=(0, 10)
-        )
+        scheduled_label = ttk.Label(parent, text=f"{self.lang_manager.get_text('common.scheduled', '定員')}:")
+        scheduled_label.grid(row=0, column=0, sticky="w", padx=(0, 10), pady=(0, 10))
         
         scheduled_var = tk.StringVar(value="0")
         scheduled_entry = ttk.Entry(parent, textvariable=scheduled_var, width=12, justify="right")
@@ -159,9 +162,8 @@ class AttendanceSectionOptimized:
         scheduled_entry.bind("<KeyRelease>", lambda e: self.calculate_rates(), add="+")
         
         # 出勤
-        ttk.Label(parent, text=f"{self.lang_manager.get_text('common.present', '出勤')}:").grid(
-            row=1, column=0, sticky="w", padx=(0, 10), pady=(0, 10)
-        )
+        present_label = ttk.Label(parent, text=f"{self.lang_manager.get_text('common.present', '出勤')}:")
+        present_label.grid(row=1, column=0, sticky="w", padx=(0, 10), pady=(0, 10))
         
         present_var = tk.StringVar(value="0")
         present_entry = ttk.Entry(parent, textvariable=present_var, width=12, justify="right")
@@ -170,9 +172,8 @@ class AttendanceSectionOptimized:
         present_entry.bind("<KeyRelease>", lambda e: self.calculate_rates(), add="+")
         
         # 欠勤
-        ttk.Label(parent, text=f"{self.lang_manager.get_text('common.absent', '欠勤')}:").grid(
-            row=2, column=0, sticky="w", padx=(0, 10), pady=(0, 10)
-        )
+        absent_label = ttk.Label(parent, text=f"{self.lang_manager.get_text('common.absent', '欠勤')}:")
+        absent_label.grid(row=2, column=0, sticky="w", padx=(0, 10), pady=(0, 10))
         
         absent_var = tk.StringVar(value="0")
         absent_entry = ttk.Entry(parent, textvariable=absent_var, width=12, justify="right")
@@ -184,7 +185,12 @@ class AttendanceSectionOptimized:
         rate_frame = ttk.Frame(parent)
         rate_frame.grid(row=0, column=2, rowspan=3, sticky="ns", padx=(15, 0))
         
-        ttk.Label(rate_frame, text=self.lang_manager.get_text("attendance.rate", "出勤率"), font=("TkDefaultFont", 9, "bold")).pack()
+        rate_title_label = ttk.Label(
+            rate_frame,
+            text=self.lang_manager.get_text("attendance.rate", "出勤率"),
+            font=("TkDefaultFont", 9, "bold"),
+        )
+        rate_title_label.pack()
         
         rate_label = ttk.Label(
             rate_frame,
@@ -200,9 +206,8 @@ class AttendanceSectionOptimized:
         status_canvas.pack()
         
         # 理由
-        ttk.Label(parent, text=f"{self.lang_manager.get_text('common.reason', '理由')}:").grid(
-            row=3, column=0, sticky="w", padx=(0, 10), pady=(10, 0)
-        )
+        reason_label = ttk.Label(parent, text=f"{self.lang_manager.get_text('common.reason', '理由')}:")
+        reason_label.grid(row=3, column=0, sticky="w", padx=(0, 10), pady=(10, 0))
         
         reason_var = tk.StringVar()
         reason_entry = ttk.Entry(parent, textvariable=reason_var, width=35)
@@ -224,32 +229,83 @@ class AttendanceSectionOptimized:
             self.contractor_reason_var = reason_var
             self.contractor_rate_label = rate_label
             self.contractor_status_canvas = status_canvas
+
+        self.staff_labels[staff_type] = {
+            "scheduled": scheduled_label,
+            "present": present_label,
+            "absent": absent_label,
+            "reason": reason_label,
+            "rate": rate_title_label,
+        }
     
     def setup_statistics_section(self):
         """設置統計區域"""
         # 總定員
-        ttk.Label(self.stats_frame, text="總定員:").grid(row=0, column=0, sticky="w")
+        self.total_scheduled_title = ttk.Label(
+            self.stats_frame,
+            text=self.lang_manager.get_text("attendance.total_scheduled", "總定員:")
+        )
+        self.total_scheduled_title.grid(row=0, column=0, sticky="w")
         self.total_scheduled_label = ttk.Label(self.stats_frame, text="0", font=("TkDefaultFont", 10, "bold"))
         self.total_scheduled_label.grid(row=0, column=1, sticky="e", padx=(10, 20))
         
         # 總出勤
-        ttk.Label(self.stats_frame, text="總出勤:").grid(row=0, column=2, sticky="w")
+        self.total_present_title = ttk.Label(
+            self.stats_frame,
+            text=self.lang_manager.get_text("attendance.total_present", "總出勤:")
+        )
+        self.total_present_title.grid(row=0, column=2, sticky="w")
         self.total_present_label = ttk.Label(self.stats_frame, text="0", font=("TkDefaultFont", 10, "bold"), foreground="#2e7d32")
         self.total_present_label.grid(row=0, column=3, sticky="e", padx=(10, 20))
         
         # 總欠勤
-        ttk.Label(self.stats_frame, text="總欠勤:").grid(row=0, column=4, sticky="w")
+        self.total_absent_title = ttk.Label(
+            self.stats_frame,
+            text=self.lang_manager.get_text("attendance.total_absent", "總欠勤:")
+        )
+        self.total_absent_title.grid(row=0, column=4, sticky="w")
         self.total_absent_label = ttk.Label(self.stats_frame, text="0", font=("TkDefaultFont", 10, "bold"), foreground="#c62828")
         self.total_absent_label.grid(row=0, column=5, sticky="e")
         
         # 整體出勤率
-        ttk.Label(self.stats_frame, text="整體出勤率:").grid(row=1, column=0, sticky="w", pady=(5, 0))
+        self.overall_rate_title = ttk.Label(
+            self.stats_frame,
+            text=self.lang_manager.get_text("attendance.overall_rate", "整體出勤率:")
+        )
+        self.overall_rate_title.grid(row=1, column=0, sticky="w", pady=(5, 0))
         self.overall_rate_label = ttk.Label(
             self.stats_frame,
             text="0%",
             font=("TkDefaultFont", 12, "bold")
         )
         self.overall_rate_label.grid(row=1, column=1, sticky="e", pady=(5, 0))
+
+    def update_language(self):
+        """更新語言文字"""
+        self.info_label.config(
+            text=self.lang_manager.get_text(
+                "attendance.info",
+                "💡 提示：出勤率 = 出勤人數 ÷ 定員人數 × 100%"
+            )
+        )
+        self.left_frame.config(text=self.lang_manager.get_text("attendance.regular_staff", "正社員 (Regular Staff)"))
+        self.right_frame.config(text=self.lang_manager.get_text("attendance.contractor_staff", "契約社員 (Contractor Staff)"))
+        self.validate_btn.config(text=self.lang_manager.get_text("attendance.validate", "驗證數據"))
+        self.stats_frame.config(text=self.lang_manager.get_text("attendance.statistics", "統計"))
+        self.save_btn.config(text=self.lang_manager.get_text("common.save", "儲存"))
+
+        for staff_type, labels in self.staff_labels.items():
+            labels["scheduled"].config(text=f"{self.lang_manager.get_text('common.scheduled', '定員')}:")
+            labels["present"].config(text=f"{self.lang_manager.get_text('common.present', '出勤')}:")
+            labels["absent"].config(text=f"{self.lang_manager.get_text('common.absent', '欠勤')}:")
+            labels["reason"].config(text=f"{self.lang_manager.get_text('common.reason', '理由')}:")
+            labels["rate"].config(text=self.lang_manager.get_text("attendance.rate", "出勤率"))
+
+        self.total_scheduled_title.config(text=self.lang_manager.get_text("attendance.total_scheduled", "總定員:"))
+        self.total_present_title.config(text=self.lang_manager.get_text("attendance.total_present", "總出勤:"))
+        self.total_absent_title.config(text=self.lang_manager.get_text("attendance.total_absent", "總欠勤:"))
+        self.overall_rate_title.config(text=self.lang_manager.get_text("attendance.overall_rate", "整體出勤率:"))
+        self.update_status_indicator()
     
     def on_data_change(self, staff_type):
         """當數據變更時調用"""
@@ -260,7 +316,7 @@ class AttendanceSectionOptimized:
         """更新狀態指示器"""
         if self.data_modified:
             self.status_label.config(
-                text="⚠️ 未儲存",
+                text=self.lang_manager.get_text("attendance.unsaved", "⚠️ 未儲存"),
                 foreground="#ff9800"
             )
         else:
@@ -368,17 +424,27 @@ class AttendanceSectionOptimized:
             
             # 驗證正社員
             if regular_present + regular_absent > regular_scheduled:
-                errors.append(f"正社員：出勤({regular_present}) + 欠勤({regular_absent}) > 定員({regular_scheduled})")
+                errors.append(
+                    self.lang_manager.get_text(
+                        "attendance.error_regular_exceeds",
+                        "正社員：出勤({present}) + 欠勤({absent}) > 定員({scheduled})"
+                    ).format(present=regular_present, absent=regular_absent, scheduled=regular_scheduled)
+                )
             
             if regular_present < 0 or regular_absent < 0 or regular_scheduled < 0:
-                errors.append("正社員：人數不能為負數")
+                errors.append(self.lang_manager.get_text("attendance.error_regular_negative", "正社員：人數不能為負數"))
             
             # 驗證契約社員
             if contractor_present + contractor_absent > contractor_scheduled:
-                errors.append(f"契約社員：出勤({contractor_present}) + 欠勤({contractor_absent}) > 定員({contractor_scheduled})")
+                errors.append(
+                    self.lang_manager.get_text(
+                        "attendance.error_contractor_exceeds",
+                        "契約社員：出勤({present}) + 欠勤({absent}) > 定員({scheduled})"
+                    ).format(present=contractor_present, absent=contractor_absent, scheduled=contractor_scheduled)
+                )
             
             if contractor_present < 0 or contractor_absent < 0 or contractor_scheduled < 0:
-                errors.append("契約社員：人數不能為負數")
+                errors.append(self.lang_manager.get_text("attendance.error_contractor_negative", "契約社員：人數不能為負數"))
             
             # 顯示結果
             if errors:
@@ -393,16 +459,31 @@ class AttendanceSectionOptimized:
                 regular_rate = (regular_present / regular_scheduled * 100) if regular_scheduled > 0 else 0
                 contractor_rate = (contractor_present / contractor_scheduled * 100) if contractor_scheduled > 0 else 0
                 
-                success_msg = (
-                    f"✅ 所有出勤數據輸入合理。\n\n"
-                    f"正社員: 定員 {self.format_number(regular_scheduled)}, "
-                    f"出勤 {self.format_number(regular_present)}, "
-                    f"欠勤 {self.format_number(regular_absent)}, "
-                    f"出勤率 {regular_rate:.1f}%\n\n"
-                    f"契約社員: 定員 {self.format_number(contractor_scheduled)}, "
-                    f"出勤 {self.format_number(contractor_present)}, "
-                    f"欠勤 {self.format_number(contractor_absent)}, "
-                    f"出勤率 {contractor_rate:.1f}%"
+                success_msg = "\n\n".join(
+                    [
+                        self.lang_manager.get_text(
+                            "attendance.validation_summary_intro",
+                            "✅ 所有出勤數據輸入合理。"
+                        ),
+                        self.lang_manager.get_text(
+                            "attendance.validation_summary_regular",
+                            "正社員: 定員 {scheduled}, 出勤 {present}, 欠勤 {absent}, 出勤率 {rate:.1f}%"
+                        ).format(
+                            scheduled=self.format_number(regular_scheduled),
+                            present=self.format_number(regular_present),
+                            absent=self.format_number(regular_absent),
+                            rate=regular_rate,
+                        ),
+                        self.lang_manager.get_text(
+                            "attendance.validation_summary_contractor",
+                            "契約社員: 定員 {scheduled}, 出勤 {present}, 欠勤 {absent}, 出勤率 {rate:.1f}%"
+                        ).format(
+                            scheduled=self.format_number(contractor_scheduled),
+                            present=self.format_number(contractor_present),
+                            absent=self.format_number(contractor_absent),
+                            rate=contractor_rate,
+                        ),
+                    ]
                 )
                 
                 messagebox.showinfo(
@@ -420,6 +501,9 @@ class AttendanceSectionOptimized:
     
     def save_attendance_data(self):
         """儲存出勤數據"""
+        if hasattr(self.app_instance, "ensure_report_context"):
+            if not self.app_instance.ensure_report_context():
+                return
         if self.validate_attendance_data():
             self.data_modified = False
             self.update_status_indicator()

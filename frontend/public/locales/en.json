@@ -3,13 +3,24 @@
     "title": "Digital Handover System",
     "languageSwitch": "Language Switch",
     "login": "Login",
-    "logout": "Logout"
+    "logout": "Logout",
+    "subtitle": "Handover Management System",
+    "version": "Version 2.0"
   },
   "navigation": {
     "home": "Home",
     "reports": "Reports",
     "settings": "Settings",
-    "admin": "Admin"
+    "admin": "Admin",
+    "menuTitle": "Navigation",
+    "dailyReport": "Daily Report",
+    "attendance": "Attendance",
+    "equipment": "Equipment",
+    "lot": "Lot Issues",
+    "summary": "Summary",
+    "masterData": "Master Data Management",
+    "delayList": "Delay List",
+    "summaryActual": "Summary Actual"
   },
   "common": {
     "save": "Save",
@@ -37,7 +48,47 @@
     "date": "Date",
     "shift": "Shift",
     "area": "Area",
-    "author": "Author"
+    "author": "Author",
+    "description": "Description",
+    "notes": "Notes",
+    "image": "Image",
+    "browse": "Browse...",
+    "selectImage": "Select Image",
+    "imageUpload": "Image Upload",
+    "id": "ID",
+    "email": "Email",
+    "role": "Role",
+    "active": "Active",
+    "createdAt": "Created At",
+    "languageCode": "Language Code",
+    "language": "Language",
+    "resourceKey": "Resource Key",
+    "resourceValue": "Resource Value",
+    "namespace": "Namespace",
+    "updatedAt": "Updated At",
+    "import": "Import",
+    "export": "Export",
+    "invalidNumber": "Invalid number",
+    "operationFailed": "Operation failed",
+    "updateFailed": "Update failed",
+    "username": "Username",
+    "password": "Password",
+    "equipmentLogs": "Equipment Logs",
+    "lotId": "Lot ID",
+    "unsupportedFormat": "Unsupported file format",
+    "add": "Add",
+    "areaName": "Area Name",
+    "basicInfo": "Basic Info",
+    "confirmQuit": "Are you sure you want to quit?",
+    "equipment": "Equipment Issues",
+    "invalidNumbers": "Please enter valid numbers",
+    "lots": "Lot Issues",
+    "quit": "Quit",
+    "summary": "Summary",
+    "selectSheet": "Select Sheet",
+    "emptyData": "No data found",
+    "uploadSuccess": "Upload successful",
+    "selectRow": "Please select a row"
   },
   "reports": {
     "title": "Daily Report",
@@ -55,7 +106,13 @@
     "password": "Password",
     "rememberMe": "Remember me",
     "forgotPassword": "Forgot password?",
-    "signIn": "Sign In"
+    "signIn": "Sign In",
+    "connectError": "Unable to connect to backend server.",
+    "failed": "Login Failed",
+    "incorrect": "Invalid username or password.",
+    "welcome": "Welcome, {username}",
+    "welcome_generic": "Welcome",
+    "welcome_offline": "Welcome (Offline)"
   },
   "errors": {
     "requiredField": "This field is required",
@@ -63,6 +120,260 @@
     "networkError": "Network error",
     "serverError": "Server error",
     "unauthorized": "Unauthorized",
-    "notFound": "Page not found"
-  }
+    "notFound": "Page not found",
+    "invalidDateFormat": "Date format must be YYYY-MM-DD"
+  },
+  "pages": {
+    "dailyReport": {
+      "title": "Daily Report",
+      "subtitle": "Record daily handover details"
+    },
+    "attendance": {
+      "title": "Attendance",
+      "subtitle": "Track regular and contractor attendance"
+    },
+    "equipment": {
+      "title": "Equipment Issues",
+      "subtitle": "Log equipment issues and actions"
+    },
+    "lot": {
+      "title": "Lot Issues",
+      "subtitle": "Log abnormal lots and handling"
+    },
+    "summary": {
+      "title": "Summary",
+      "subtitle": "Daily summary and analysis"
+    },
+    "admin": {
+      "title": "System Admin",
+      "subtitle": "Manage users, translations, and settings"
+    },
+    "delayList": {
+      "title": "Delay List",
+      "subtitle": "Import and search delay list"
+    },
+    "summaryActual": {
+      "title": "Summary Actual",
+      "subtitle": "Import and search summary actual"
+    }
+  },
+  "cards": {
+    "dateShift": "Date & Shift",
+    "basicSummary": "Basics & Summary",
+    "equipmentRecord": "Equipment Logs",
+    "lotRecord": "Lot Logs",
+    "workSummary": "Work Summary",
+    "statsToday": "Today's Stats",
+    "databaseSettings": "Database Settings",
+    "systemSettings": "System Settings",
+    "delayList": "Delay List",
+    "delayListTable": "Delay List Data",
+    "summaryActual": "Summary Actual",
+    "summaryActualTable": "Summary Actual Data"
+  },
+  "fields": {
+    "date": "📅 Date:",
+    "shift": "⏰ Shift:",
+    "area": "🏭 Area:"
+  },
+  "summary": {
+    "keyOutput": "🔑 Key Machine Output:",
+    "issues": "⚠️ Key Issues:",
+    "countermeasures": "✅ Countermeasures:"
+  },
+  "actions": {
+    "saveDailyReport": "💾 Save Report",
+    "resetDailyReport": "🔄 Reset",
+    "addEquipment": "➕ Add Record",
+    "viewEquipmentHistory": "📋 View History",
+    "addLot": "➕ Add Lot",
+    "viewLotList": "📋 View List"
+  },
+  "status": {
+    "ready": "Ready",
+    "languageChanged": "🌐 Language switched to: {language}",
+    "loginSuccess": "✅ Login successful",
+    "loggedOut": "✅ Logged out",
+    "equipmentAdded": "✅ Equipment record added",
+    "equipmentHistoryLoading": "📋 Loading equipment history...",
+    "lotAdded": "✅ Lot record added",
+    "lotListLoading": "📋 Loading lot list...",
+    "imageSelected": "📷 Image selected: {filename}",
+    "dailySaved": "💾 Daily report saved",
+    "dailyReset": "🔄 Daily report reset"
+  },
+  "settings": {
+    "databasePath": "Database Path:",
+    "autoBackup": "Enable Auto Backup",
+    "backupInterval": "Backup Interval:",
+    "days": "days"
+  },
+  "stats": {
+    "dailyReports": "Reports Today",
+    "avgAttendance": "Avg Attendance",
+    "equipmentIssues": "Equipment Issues",
+    "lotIssues": "Lot Issues",
+    "unitReports": "items",
+    "unitPercent": "%",
+    "unitItems": "items"
+  },
+  "auth": {
+    "not_logged_in": "Not signed in",
+    "logged_in_as": "👤 {username} ({role})",
+    "loginUnavailable": "Login is temporarily unavailable"
+  },
+  "attendance": {
+    "regular_staff": "Regular Staff",
+    "contractor_staff": "Contractor Staff",
+    "validate": "Validate Data",
+    "statistics": "Statistics",
+    "rate": "Attendance Rate",
+    "info": "💡 Tip: Attendance rate = present ÷ scheduled × 100%",
+    "total_scheduled": "Total Scheduled:",
+    "total_present": "Total Present:",
+    "total_absent": "Total Absent:",
+    "overall_rate": "Overall Rate:",
+    "unsaved": "⚠️ Unsaved",
+    "error_regular_exceeds": "Regular: present({present}) + absent({absent}) > scheduled({scheduled})",
+    "error_regular_negative": "Regular: counts cannot be negative",
+    "error_contractor_exceeds": "Contractor: present({present}) + absent({absent}) > scheduled({scheduled})",
+    "error_contractor_negative": "Contractor: counts cannot be negative",
+    "validation_summary_intro": "✅ Attendance data looks valid.",
+    "validation_summary_regular": "Regular: scheduled {scheduled}, present {present}, absent {absent}, rate {rate:.1f}%",
+    "validation_summary_contractor": "Contractor: scheduled {scheduled}, present {present}, absent {absent}, rate {rate:.1f}%",
+    "validation_failed": "Validation Failed",
+    "validation_success": "Validation Success",
+    "invalid_numbers": "Please enter valid numbers",
+    "saved": "Attendance saved",
+    "records": "Attendance Records"
+  },
+  "equipment": {
+    "equipId": "Equipment ID",
+    "startTime": "Start Time",
+    "impactQty": "Impact Qty",
+    "actionTaken": "Action Taken",
+    "input": "Equipment Input",
+    "logs": "Equipment Logs",
+    "requireFields": "Equipment ID and description are required",
+    "recordAdded": "Equipment log added"
+  },
+  "lot": {
+    "lotId": "Lot ID",
+    "status": "Status",
+    "notes": "Notes",
+    "input": "Lot Input",
+    "logs": "Lot Logs",
+    "requireFields": "Lot ID and description are required",
+    "recordAdded": "Lot log added"
+  },
+  "admin": {
+    "userManagement": "User Management",
+    "addEditUser": "Add/Edit User",
+    "userList": "User List",
+    "requiredFields": "Username and password are required",
+    "userCreated": "User created",
+    "selectUserToUpdate": "Select a user to update",
+    "userUpdated": "User updated",
+    "selectUserToDelete": "Select a user to delete",
+    "confirmDeleteUser": "Delete this user?",
+    "userDeleted": "User deleted",
+    "selectUserToResetPassword": "Select a user to reset password",
+    "confirmResetPassword": "Reset password for '{username}'?",
+    "passwordChanged": "Password changed",
+    "passwordResetSuccess": "Password reset for '{username}'",
+    "passwordResetFailed": "Password reset failed",
+    "translationManagement": "Translation Management",
+    "addEditTranslation": "Add/Edit Translation",
+    "translationResources": "Translation Resources",
+    "resourceAdded": "Resource added",
+    "selectResourceToUpdate": "Select a resource to update",
+    "resourceUpdated": "Resource updated",
+    "selectResourceToDelete": "Select a resource to delete",
+    "confirmDeleteResource": "Delete this resource?",
+    "resourceDeleted": "Resource deleted",
+    "selectJsonFile": "Select JSON File",
+    "resourcesImported": "Resources imported",
+    "importFailed": "Import failed",
+    "saveJsonFile": "Save JSON File",
+    "resourcesExported": "Resources exported",
+    "exportFailed": "Export failed",
+    "tabUsers": "👥 Users",
+    "tabTranslations": "🌐 Translations",
+    "tabSettings": "⚙️ Settings"
+  },
+  "password": {
+    "change_title": "Change Password",
+    "current": "Current Password",
+    "new": "New Password",
+    "confirm": "Confirm Password",
+    "show": "Show Password",
+    "requirements": "Password Requirements:",
+    "req_length": "At least 8 characters",
+    "req_uppercase": "Contains uppercase letter",
+    "req_lowercase": "Contains lowercase letter",
+    "req_number": "Contains number",
+    "req_special": "Contains special character (!@#$%^&*(),.?:{}|<>)",
+    "suggestions": "Suggestions:",
+    "strength": "Password Strength",
+    "strength_weak": "Weak",
+    "strength_medium": "Medium",
+    "strength_strong": "Strong",
+    "strength_very_strong": "Very Strong",
+    "error_current_required": "Enter current password",
+    "error_new_required": "Enter new password",
+    "error_confirm_required": "Confirm new password",
+    "error_mismatch": "Passwords do not match",
+    "error_same": "New password cannot match current password",
+    "error_strength": "New password does not meet requirements:",
+    "success": "Password changed successfully!",
+    "change": "Change Password",
+    "strength_error_title": "Password Too Weak"
+  },
+  "shift": {
+    "day": "Day",
+    "night": "Night"
+  },
+  "delay": {
+    "startDate": "Start Date YYYY-MM-DD",
+    "endDate": "End Date YYYY-MM-DD",
+    "importExcel": "Import Delay Excel",
+    "confirmUpload": "Confirm Upload",
+    "refresh": "Refresh",
+    "clear": "Clear View",
+    "date": "Date",
+    "time": "Time",
+    "reactor": "Reactor",
+    "process": "Process",
+    "lot": "Lot",
+    "wafer": "Wafer",
+    "progress": "In Progress",
+    "prevSteps": "Previous Steps",
+    "prevTime": "Prev Time",
+    "severity": "Severity",
+    "action": "Action",
+    "note": "Note",
+    "importPending": "Imported. Please confirm before upload."
+  },
+  "summaryActual": {
+    "startDate": "Filter Start YYYY-MM-DD",
+    "endDate": "Filter End YYYY-MM-DD",
+    "importExcel": "Import Summary Actual",
+    "confirmUpload": "Confirm Upload",
+    "clear": "Clear View",
+    "date": "Date",
+    "label": "Label",
+    "plan": "Plan",
+    "completed": "Completed",
+    "inProcess": "In Process",
+    "onTrack": "On Track",
+    "atRisk": "At Risk",
+    "delayed": "Delayed",
+    "noData": "No Data",
+    "scrapped": "Scrapped",
+    "importPending": "Imported. Please confirm before upload."
+  },
+  "context.currentReport": "Current report: Date {date} | Shift {shift} | Area {area}",
+  "context.unknown": "Not set",
+  "context.missingTitle": "Daily report not set",
+  "context.missingBody": "Please set the date, shift, and area in Daily Report before continuing."
 }

@@ -15,13 +15,12 @@ def check_python_imports():
     print("檢查 Python 模組導入...")
     
     required_modules = [
-        "fastapi",
-        "uvicorn", 
         "sqlalchemy",
         "bcrypt",
-        "PIL",
-        "pydantic",
-        "pydantic_settings"
+        "pandas",
+        "openpyxl",
+        "matplotlib",
+        "tkinter",
     ]
     
     missing_modules = []
@@ -41,16 +40,13 @@ def test_database_connection():
     """測試數據庫連接"""
     print("\n測試數據庫連接...")
     try:
-        from backend.core.config import settings
-        from sqlalchemy import create_engine
+        from sqlalchemy import text
+        from models import engine
         from sqlalchemy.exc import SQLAlchemyError
-        
-        # 創建引擎
-        engine = create_engine(settings.DATABASE_URL, echo=False)
         
         # 測試連接
         with engine.connect() as conn:
-            result = conn.execute("SELECT 1")
+            conn.execute(text("SELECT 1"))
             print("✓ 數據庫連接測試成功")
             return True
     except Exception as e:
@@ -62,15 +58,13 @@ def test_language_manager():
     """測試語言管理器功能"""
     print("\n測試語言管理器功能...")
     try:
-        from backend.core.language_manager import lang_manager
-        
-        # 測試語言切換
-        current_lang = lang_manager.get_current_language()
-        print(f"✓ 當前語言: {current_lang}")
+        from language_manager import LanguageResourceManager
+        lang_manager = LanguageResourceManager()
         
         # 測試翻譯功能
+        current_lang = "ja"
         test_key = "common.title"
-        translated = lang_manager.get_text(test_key, "Default Title")
+        translated = lang_manager.get_resource(current_lang, test_key)
         print(f"✓ 翻譯測試 ('{test_key}' → '{translated}')")
         
         return True
@@ -84,7 +78,7 @@ def test_models():
     print("\n測試數據模型...")
     try:
         # 嘗試導入主要的模型
-        from backend.models.all_models import User, DailyReport, AttendanceRecord, EquipmentLog, LotLog
+        from models import User, DailyReport, AttendanceEntry, EquipmentLog, LotLog
         print("✓ 數據模型導入成功")
         return True
     except Exception as e:
@@ -123,7 +117,7 @@ def main():
     
     if overall_success:
         print("\n系統已準備就緒，可以執行以下命令啟動應用程式:")
-        print("  python run_app.py")
+        print("  python app.py")
     else:
         print("\n發現問題，請先解決後再嘗試啟動應用程式")
     

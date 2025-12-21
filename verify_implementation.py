@@ -10,51 +10,21 @@ from pathlib import Path
 root_dir = Path(__file__).parent
 sys.path.insert(0, str(root_dir))
 
-# 檢查後端核心模塊
-print("檢查後端核心模塊...")
+# 檢查桌面版核心模塊
+print("檢查核心模塊...")
 
-try:
-    from backend.core.config import settings
-    print("✓ 配置模塊導入成功")
-except ImportError as e:
-    print(f"✗ 配置模塊導入失敗: {e}")
-
-try:
-    from backend.core.security import get_password_hash, verify_password
-    print("✓ 安全模塊導入成功")
-except ImportError as e:
-    print(f"✗ 安全模塊導入失敗: {e}")
-
-try:
-    from backend.database.base import engine, Base, get_db
-    print("✓ 數據庫基礎模塊導入成功")
-except ImportError as e:
-    print(f"✗ 數據庫基礎模塊導入失敗: {e}")
-
-try:
-    from backend.models.all_models import User, DailyReport, AttendanceRecord, EquipmentLog, LotLog, LanguageResource, LanguageSetting
-    print("✓ 數據模型導入成功")
-except ImportError as e:
-    print(f"✗ 數據模型導入失敗: {e}")
-
-# 檢查後端 API 端點
-print("\n檢查後端 API 端點...")
-endpoints_to_check = [
-    "backend.api.v1.endpoints.auth",
-    "backend.api.v1.endpoints.users", 
-    "backend.api.v1.endpoints.reports",
-    "backend.api.v1.endpoints.attendance",
-    "backend.api.v1.endpoints.equipment",
-    "backend.api.v1.endpoints.lots",
-    "backend.api.v1.endpoints.languages"
+core_modules = [
+    ("app.py", "主程式"),
+    ("auth.py", "密碼雜湊/驗證"),
+    ("models.py", "資料模型"),
+    ("language_manager.py", "語言資源管理"),
 ]
 
-for endpoint in endpoints_to_check:
-    try:
-        __import__(endpoint)
-        print(f"✓ {endpoint} 導入成功")
-    except ImportError as e:
-        print(f"✗ {endpoint} 導入失敗: {e}")
+for module_path, label in core_modules:
+    if os.path.exists(module_path):
+        print(f"✓ {label} 存在 ({module_path})")
+    else:
+        print(f"✗ {label} 不存在 ({module_path})")
 
 # 檢查前端模塊
 print("\n檢查前端模塊...")
@@ -93,13 +63,13 @@ for spec_dir in spec_directories:
     else:
         print(f"✗ {spec_dir}/spec.md 不存在")
 
-# 檢查數據庫初始化
-print("\n檢查數據庫初始化文件...")
-db_init_path = os.path.join(root_dir, "backend", "database", "init_db.py")
-if os.path.exists(db_init_path):
-    print("✓ 數據庫初始化文件存在")
+# 檢查資料庫檔案
+print("\n檢查資料庫檔案...")
+db_path = os.path.join(root_dir, "handover_system.db")
+if os.path.exists(db_path):
+    print("✓ handover_system.db 存在")
 else:
-    print("✗ 數據庫初始化文件不存在")
+    print("ℹ handover_system.db 尚未建立（首次啟動會自動建立）")
 
 # 檢查語言資源文件
 print("\n檢查語言資源文件...")
