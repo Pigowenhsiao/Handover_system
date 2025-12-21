@@ -113,7 +113,7 @@ def start_modern_ui():
 def main():
     """主函數"""
     print("=" * 70)
-    print("電子交接系統 - 現代化版本 v2.0")
+    print("電子交接系統 - 現代化版本 v2.1")
     print("=" * 70)
     print()
     

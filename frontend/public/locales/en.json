@@ -5,7 +5,7 @@
     "login": "Login",
     "logout": "Logout",
     "subtitle": "Handover Management System",
-    "version": "Version 2.0"
+    "version": "Version 2.1"
   },
   "navigation": {
     "home": "Home",
@@ -238,7 +238,11 @@
     "databasePath": "Database Path:",
     "autoBackup": "Enable Auto Backup",
     "backupInterval": "Backup Interval:",
-    "days": "days"
+    "days": "days",
+    "saveBackup": "Confirm",
+    "invalidBackupInterval": "Backup interval must be a positive integer",
+    "saved": "✅ Settings saved",
+    "saveFailed": "Failed to save settings: {error}"
   },
   "stats": {
     "dailyReports": "Reports Today",
@@ -323,6 +327,7 @@
     "addEditUser": "Add/Edit User",
     "userList": "User List",
     "resetPassword": "Reset Password",
+    "loadUsersFailed": "Failed to load users: {error}",
     "tabMasterData": "🧩 Shift & Area",
     "shiftManagement": "Shift Management",
     "areaManagement": "Area Management",

@@ -13,6 +13,7 @@ import pandas as pd
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.figure import Figure
 from matplotlib import rcParams
+from sqlalchemy.orm import joinedload
 
 # 導入現有組件
 from frontend.src.components.language_selector import LanguageSelector
@@ -1030,11 +1031,21 @@ class ModernMainFrame:
         table_frame = ttk.Frame(table_card, style='Card.TFrame')
         table_frame.pack(fill='both', expand=True, padx=self.layout["card_pad"], pady=self.layout["card_pad"])
 
-        cols = ("date", "area", "regular_present", "regular_absent", "contract_present", "contract_absent", "notes")
+        cols = (
+            "date",
+            "area",
+            "author",
+            "regular_present",
+            "regular_absent",
+            "contract_present",
+            "contract_absent",
+            "notes",
+        )
         self.summary_dash_columns = cols
         self.summary_dash_header_keys = [
             ("common.date", "日期"),
             ("common.area", "區域"),
+            ("common.author", "填寫者"),
             ("summaryDashboard.regularPresent", "正職出勤"),
             ("summaryDashboard.regularAbsent", "正職缺勤"),
             ("summaryDashboard.contractPresent", "契約出勤"),
@@ -1124,6 +1135,7 @@ class ModernMainFrame:
         widths = {
             "date": 110,
             "area": 120,
+            "author": 140,
             "regular_present": 90,
             "regular_absent": 90,
             "contract_present": 90,
@@ -1133,6 +1145,7 @@ class ModernMainFrame:
         anchors = {
             "date": "center",
             "area": "center",
+            "author": "center",
             "regular_present": "center",
             "regular_absent": "center",
             "contract_present": "center",
@@ -1190,6 +1203,7 @@ class ModernMainFrame:
             with SessionLocal() as db:
                 reports = (
                     db.query(DailyReport)
+                    .options(joinedload(DailyReport.author))
                     .filter(DailyReport.date >= start_date, DailyReport.date <= end_date)
                     .order_by(DailyReport.date, DailyReport.area)
                     .all()
@@ -1245,6 +1259,7 @@ class ModernMainFrame:
                 contract_present = contract.get("present", 0)
                 contract_absent = contract.get("absent", 0)
                 notes = self._build_attendance_notes(regular.get("reason", ""), contract.get("reason", ""))
+                author_name = report.author.username if report.author else ""
 
                 self.summary_dash_tree.insert(
                     "",
@@ -1252,6 +1267,7 @@ class ModernMainFrame:
                     values=(
                         report.date.strftime("%Y-%m-%d"),
                         report.area,
+                        author_name,
                         regular_present,
                         regular_absent,
                         contract_present,
@@ -1664,7 +1680,64 @@ class ModernMainFrame:
         ttk.Entry(backup_frame, textvariable=self.backup_interval_var, width=5, style='Modern.TEntry').pack(side='left')
         days_label = ttk.Label(backup_frame, font=('Segoe UI', 10))
         self._register_text(days_label, "settings.days", "天", scope="page")
-        days_label.pack(side='left', padx=(5, 0))
+        days_label.pack(side='left', padx=(5, 10))
+
+        save_btn = ttk.Button(backup_frame, style='Primary.TButton', command=self.save_system_settings)
+        self._register_text(save_btn, "settings.saveBackup", "確認", scope="page")
+        save_btn.pack(side='left')
+
+        self._load_system_settings()
+
+    def _settings_path(self):
+        root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+        return os.path.join(root_dir, "handover_settings.json")
+
+    def _load_system_settings(self):
+        path = self._settings_path()
+        if not os.path.exists(path):
+            return
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            if "auto_backup" in data:
+                self.auto_backup_var.set(bool(data["auto_backup"]))
+            if "backup_interval_days" in data:
+                self.backup_interval_var.set(str(data["backup_interval_days"]))
+        except Exception:
+            return
+
+    def save_system_settings(self):
+        try:
+            interval = int(self.backup_interval_var.get().strip())
+        except ValueError:
+            messagebox.showerror(
+                self._t("common.error", "錯誤"),
+                self._t("common.invalidNumber", "數字格式無效")
+            )
+            return
+        if interval <= 0:
+            messagebox.showerror(
+                self._t("common.error", "錯誤"),
+                self._t("settings.invalidBackupInterval", "備份間隔需為正整數")
+            )
+            return
+        data = {
+            "auto_backup": bool(self.auto_backup_var.get()),
+            "backup_interval_days": interval,
+        }
+        try:
+            with open(self._settings_path(), "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            self._set_status("settings.saved", "✅ 設定已儲存")
+            messagebox.showinfo(
+                self._t("common.success", "成功"),
+                self._t("settings.saved", "✅ 設定已儲存")
+            )
+        except Exception as exc:
+            messagebox.showerror(
+                self._t("common.error", "錯誤"),
+                self._t("settings.saveFailed", "設定儲存失敗：{error}").format(error=exc)
+            )
     
     def toggle_sidebar(self):
         """收合/展開側邊欄"""

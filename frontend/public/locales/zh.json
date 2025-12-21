@@ -5,7 +5,7 @@
     "login": "登入",
     "logout": "登出",
     "subtitle": "交接管理系統",
-    "version": "版本 2.0"
+    "version": "版本 2.1"
   },
   "navigation": {
     "home": "首頁",
@@ -238,7 +238,11 @@
     "databasePath": "資料庫路徑:",
     "autoBackup": "啟用自動備份",
     "backupInterval": "備份間隔:",
-    "days": "天"
+    "days": "天",
+    "saveBackup": "確認",
+    "invalidBackupInterval": "備份間隔需為正整數",
+    "saved": "✅ 設定已儲存",
+    "saveFailed": "設定儲存失敗：{error}"
   },
   "stats": {
     "dailyReports": "今日報表",
@@ -323,6 +327,7 @@
     "addEditUser": "新增/編輯使用者",
     "userList": "使用者列表",
     "resetPassword": "重設密碼",
+    "loadUsersFailed": "載入使用者資料失敗：{error}",
     "tabMasterData": "🧩 班別/區域",
     "shiftManagement": "班別管理",
     "areaManagement": "區域管理",

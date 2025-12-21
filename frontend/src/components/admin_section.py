@@ -6,7 +6,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 from datetime import datetime
 import json
-from models import SessionLocal, ShiftOption, AreaOption
+from models import SessionLocal, ShiftOption, AreaOption, User
 
 
 class UserManagementSection:
@@ -63,6 +63,7 @@ class UserManagementSection:
         self.role_label = ttk.Label(self.input_frame, text="角色:")
         self.role_label.grid(row=1, column=2, sticky=tk.W, padx=(10, 5), pady=2)
         self.role_var = tk.StringVar(value="user")
+        self.active_var = tk.BooleanVar(value=True)
         role_combo = ttk.Combobox(
             self.input_frame,
             textvariable=self.role_var,
@@ -160,6 +161,32 @@ class UserManagementSection:
         
         # 更新界面語言
         self.update_ui_language()
+        self.load_users()
+
+    def load_users(self):
+        for item in self.tree.get_children():
+            self.tree.delete(item)
+        try:
+            with SessionLocal() as db:
+                users = db.query(User).order_by(User.id).all()
+            for user in users:
+                self.tree.insert(
+                    "",
+                    "end",
+                    values=(
+                        user.id,
+                        user.username,
+                        "",
+                        user.role,
+                        "是",
+                        "",
+                    ),
+                )
+        except Exception as exc:
+            messagebox.showerror(
+                self.lang_manager.get_text("common.error", "錯誤"),
+                self.lang_manager.get_text("admin.loadUsersFailed", "載入使用者資料失敗：{error}").format(error=exc),
+            )
     
     def update_ui_language(self):
         """根據當前語言更新界面標示"""
