@@ -2121,6 +2121,10 @@ class ModernMainFrame:
         self._register_text(clear_btn, "delay.clear", "清除畫面", scope="page")
         clear_btn.grid(row=1, column=3, padx=(20, 0), pady=self.layout["row_pad"])
 
+        delete_btn = ttk.Button(control_frame, style='Accent.TButton', command=self._delete_selected_delay_pending)
+        self._register_text(delete_btn, "common.delete", "刪除", scope="page")
+        delete_btn.grid(row=1, column=4, padx=(20, 0), pady=self.layout["row_pad"])
+
         table_card = self.create_card(self.page_content, '📋', "cards.delayListTable", "延遲清單資料")
         table_card.pack(fill='both', expand=True)
 
@@ -2159,7 +2163,7 @@ class ModernMainFrame:
             ("delay.note", "備註"),
         ]
 
-        self.delay_tree = ttk.Treeview(table_frame, columns=cols, show="headings", height=14)
+        self.delay_tree = ttk.Treeview(table_frame, columns=cols, show="headings", height=14, selectmode="extended")
         self._update_delay_headers()
         self.delay_tree.pack(side='left', fill='both', expand=True)
         delay_scroll = ttk.Scrollbar(table_frame, orient="vertical", command=self.delay_tree.yview)
@@ -2217,6 +2221,10 @@ class ModernMainFrame:
         self._register_text(clear_btn, "summaryActual.clear", "清除畫面", scope="page")
         clear_btn.grid(row=1, column=2, padx=(20, 0), pady=self.layout["row_pad"])
 
+        delete_btn = ttk.Button(control_frame, style='Accent.TButton', command=self._delete_selected_summary_pending)
+        self._register_text(delete_btn, "common.delete", "刪除", scope="page")
+        delete_btn.grid(row=1, column=3, padx=(20, 0), pady=self.layout["row_pad"])
+
         table_card = self.create_card(self.page_content, '📋', "cards.summaryActualTable", "Summary Actual 資料")
         table_card.pack(fill='both', expand=True)
 
@@ -2251,7 +2259,11 @@ class ModernMainFrame:
             ("summaryActual.scrapped", "Scrapped"),
         ]
 
-        self.summary_tree = ttk.Treeview(table_frame, columns=cols, show="headings", height=14)
+        self.summary_tree = ttk.Treeview(table_frame, columns=cols, show="headings", height=14, selectmode="extended")
+        self.summary_tree.tag_configure("summary_red", foreground="#B00020", font=("Segoe UI", 11, "bold"))
+        self.summary_tree.tag_configure("summary_green", foreground="#006400", font=("Segoe UI", 11, "bold"))
+        self.summary_tree.tag_configure("summary_yellow", foreground="#FFC107", font=("Segoe UI", 11, "bold"))
+        self.summary_tree.tag_configure("summary_default", font=("Segoe UI", 11))
         self._update_summary_headers()
         self.summary_tree.pack(side='left', fill='both', expand=True)
         summary_scroll = ttk.Scrollbar(table_frame, orient="vertical", command=self.summary_tree.yview)
@@ -3053,10 +3065,91 @@ class ModernMainFrame:
             self._clear_tree(self.delay_tree)
         self.delay_pending_records = []
 
+    def _delete_selected_delay_pending(self):
+        if not self.delay_pending_records:
+            messagebox.showinfo(self._t("common.info", "資訊"), self._t("common.emptyData", "查無資料"))
+            return
+        selections = self.delay_tree.selection()
+        if not selections:
+            messagebox.showinfo(self._t("common.info", "資訊"), self._t("common.selectRow", "請先選擇一列"))
+            return
+        indices = []
+        for item in selections:
+            values = self.delay_tree.item(item, "values")
+            if not values:
+                continue
+            row_id = values[0]
+            if isinstance(row_id, str) and row_id.startswith("P"):
+                try:
+                    indices.append(int(row_id[1:]))
+                except ValueError:
+                    continue
+        if not indices:
+            messagebox.showinfo(self._t("common.info", "資訊"), self._t("common.selectRow", "請先選擇一列"))
+            return
+        for idx in sorted(set(indices), reverse=True):
+            if 0 <= idx < len(self.delay_pending_records):
+                del self.delay_pending_records[idx]
+        self._load_delay_entries()
+
     def _clear_summary_view(self):
         if hasattr(self, "summary_tree"):
             self._clear_tree(self.summary_tree)
         self.summary_pending_records = []
+
+    def _delete_selected_summary_pending(self):
+        if not self.summary_pending_records:
+            messagebox.showinfo(self._t("common.info", "資訊"), self._t("common.emptyData", "查無資料"))
+            return
+        selections = self.summary_tree.selection()
+        if not selections:
+            messagebox.showinfo(self._t("common.info", "資訊"), self._t("common.selectRow", "請先選擇一列"))
+            return
+        indices = []
+        for item in selections:
+            values = self.summary_tree.item(item, "values")
+            if not values:
+                continue
+            row_id = values[0]
+            if isinstance(row_id, str) and row_id.startswith("P"):
+                try:
+                    indices.append(int(row_id[1:]))
+                except ValueError:
+                    continue
+        if not indices:
+            messagebox.showinfo(self._t("common.info", "資訊"), self._t("common.selectRow", "請先選擇一列"))
+            return
+        for idx in sorted(set(indices), reverse=True):
+            if 0 <= idx < len(self.summary_pending_records):
+                del self.summary_pending_records[idx]
+        self._load_summary_actual()
+
+    def _summary_row_tags(self, row):
+        def val(key):
+            if isinstance(row, dict):
+                return row.get(key, 0) or 0
+            return getattr(row, key, 0) or 0
+
+        def has_number(keys):
+            for key in keys:
+                try:
+                    if int(val(key)) != 0:
+                        return True
+                except Exception:
+                    try:
+                        if float(val(key)) != 0:
+                            return True
+                    except Exception:
+                        continue
+            return False
+
+        if has_number(["delayed"]):
+            return ("summary_default", "summary_red")
+        if has_number(["plan", "completed", "in_process", "on_track"]):
+            return ("summary_default", "summary_green")
+        if has_number(["at_risk", "no_data", "scrapped"]):
+            return ("summary_default", "summary_yellow")
+        return ("summary_default",)
 
     def _render_delay_rows(self, rows, pending=False):
         self._clear_tree(self.delay_tree)
@@ -3127,33 +3220,37 @@ class ModernMainFrame:
     def _import_delay_excel(self):
         path = filedialog.askopenfilename(
             title=self._t("delay.importExcel", "匯入延遲Excel"),
-            filetypes=[("Excel Files", "*.xlsx;*.xls")],
+            filetypes=[("Excel Files", "*.xlsx;*.xls;*.xlsm"), ("Text/CSV Files", "*.csv;*.txt")],
         )
         if not path:
             return
         try:
-            xls = pd.ExcelFile(path)
-            sheet_name = xls.sheet_names[0]
-            if len(xls.sheet_names) > 1:
-                picker = tk.Toplevel(self.parent)
-                picker.configure(background=self.COLORS['background'])
-                picker.title(self._t("navigation.delayList", "延遲清單"))
-                ttk.Label(picker, text=self._t("common.selectSheet", "選擇工作表")).pack(padx=10, pady=5)
-                sheet_var = tk.StringVar(value=xls.sheet_names[0])
-                combo = ttk.Combobox(picker, textvariable=sheet_var, values=xls.sheet_names, state="readonly")
-                combo.pack(padx=10, pady=5)
-                chosen = {"name": sheet_name}
+            ext = os.path.splitext(path)[1].lower()
+            if ext in (".csv", ".txt"):
+                df = pd.read_csv(path, header=1, sep=None, engine="python")
+            else:
+                xls = pd.ExcelFile(path)
+                sheet_name = xls.sheet_names[0]
+                if len(xls.sheet_names) > 1:
+                    picker = tk.Toplevel(self.parent)
+                    picker.configure(background=self.COLORS['background'])
+                    picker.title(self._t("navigation.delayList", "延遲清單"))
+                    ttk.Label(picker, text=self._t("common.selectSheet", "選擇工作表")).pack(padx=10, pady=5)
+                    sheet_var = tk.StringVar(value=xls.sheet_names[0])
+                    combo = ttk.Combobox(picker, textvariable=sheet_var, values=xls.sheet_names, state="readonly")
+                    combo.pack(padx=10, pady=5)
+                    chosen = {"name": sheet_name}
 
-                def confirm():
-                    chosen["name"] = sheet_var.get()
-                    picker.destroy()
+                    def confirm():
+                        chosen["name"] = sheet_var.get()
+                        picker.destroy()
 
-                ttk.Button(picker, text=self._t("common.ok", "確定"), command=confirm).pack(pady=8)
-                picker.grab_set()
-                picker.wait_window()
-                sheet_name = chosen["name"]
+                    ttk.Button(picker, text=self._t("common.ok", "確定"), command=confirm).pack(pady=8)
+                    picker.grab_set()
+                    picker.wait_window()
+                    sheet_name = chosen["name"]
 
-            df = pd.read_excel(xls, sheet_name=sheet_name, header=1)
+                df = pd.read_excel(xls, sheet_name=sheet_name, header=1)
         except Exception as exc:
             messagebox.showerror(self._t("common.error", "錯誤"), f"{exc}")
             return
@@ -3394,6 +3491,7 @@ class ModernMainFrame:
                         fmt(row["no_data"]),
                         fmt(row["scrapped"]),
                     ),
+                    tags=self._summary_row_tags(row),
                 )
             return
 
@@ -3426,17 +3524,22 @@ class ModernMainFrame:
                     fmt(row.no_data),
                     fmt(row.scrapped),
                 ),
+                tags=self._summary_row_tags(row),
             )
 
     def _import_summary_actual_excel(self):
         path = filedialog.askopenfilename(
             title=self._t("summaryActual.importExcel", "匯入 Summary Actual"),
-            filetypes=[("Excel Files", "*.xlsx;*.xls")],
+            filetypes=[("Excel Files", "*.xlsx;*.xls;*.xlsm"), ("Text/CSV Files", "*.csv;*.txt")],
         )
         if not path:
             return
+        ext = os.path.splitext(path)[1].lower()
         try:
-            raw_sheet = pd.read_excel(path, sheet_name="Summary(Actual)", header=None)
+            if ext in (".csv", ".txt"):
+                raw_sheet = pd.read_csv(path, header=None, sep=None, engine="python")
+            else:
+                raw_sheet = pd.read_excel(path, sheet_name="Summary(Actual)", header=None)
         except Exception as exc:
             messagebox.showerror(self._t("common.error", "錯誤"), f"{exc}")
             return
@@ -3453,7 +3556,10 @@ class ModernMainFrame:
             return
 
         try:
-            df = pd.read_excel(path, sheet_name="Summary(Actual)", header=2)
+            if ext in (".csv", ".txt"):
+                df = pd.read_csv(path, header=2, sep=None, engine="python")
+            else:
+                df = pd.read_excel(path, sheet_name="Summary(Actual)", header=2)
         except Exception as exc:
             messagebox.showerror(self._t("common.error", "錯誤"), f"{exc}")
             return

@@ -1,5 +1,6 @@
 dist/
 build/
 dist/ 
+.venv/
 git_token
-git_token
+
