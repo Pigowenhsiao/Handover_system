@@ -5,9 +5,12 @@ from pathlib import Path
 import json
 import sys
 import shutil
+import sqlite3
+import time
 from typing import Generator, Optional
 
-from sqlalchemy import Column, Integer, String, Date, DateTime, Text, ForeignKey, create_engine
+from sqlalchemy import Column, Integer, String, Date, DateTime, Text, ForeignKey, create_engine, event
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import declarative_base, relationship, sessionmaker, Session
 
 def _get_app_root() -> Path:
@@ -66,12 +69,68 @@ def _maybe_migrate_database(target_path: Path) -> None:
 DATABASE_PATH = get_database_path()
 DATABASE_URL = f"sqlite:///{DATABASE_PATH.as_posix()}"
 
+SQLITE_BUSY_TIMEOUT_MS = 5000
+SQLITE_BUSY_RETRY_COUNT = 3
+SQLITE_BUSY_RETRY_BACKOFF_SEC = 0.25
+
 engine = create_engine(
     DATABASE_URL,
-    connect_args={"check_same_thread": False},
+    connect_args={"check_same_thread": False, "timeout": SQLITE_BUSY_TIMEOUT_MS / 1000},
     future=True,
 )
-SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
+
+
+def _is_sqlite_busy_error(error: Exception) -> bool:
+    message = str(error).lower()
+    if "database is locked" in message or "database is busy" in message:
+        return True
+    if isinstance(error, OperationalError):
+        orig = getattr(error, "orig", None)
+        if orig:
+            orig_message = str(orig).lower()
+            return "database is locked" in orig_message or "database is busy" in orig_message
+    return False
+
+
+class RetryingSession(Session):
+    def commit(self) -> None:
+        for attempt in range(SQLITE_BUSY_RETRY_COUNT + 1):
+            try:
+                super().commit()
+                return
+            except OperationalError as exc:
+                if _is_sqlite_busy_error(exc) and attempt < SQLITE_BUSY_RETRY_COUNT:
+                    self.rollback()
+                    time.sleep(SQLITE_BUSY_RETRY_BACKOFF_SEC * (attempt + 1))
+                    continue
+                raise
+            except sqlite3.OperationalError as exc:
+                if _is_sqlite_busy_error(exc) and attempt < SQLITE_BUSY_RETRY_COUNT:
+                    self.rollback()
+                    time.sleep(SQLITE_BUSY_RETRY_BACKOFF_SEC * (attempt + 1))
+                    continue
+                raise
+
+
+@event.listens_for(engine, "connect")
+def _configure_sqlite(connection, _):
+    if not isinstance(connection, sqlite3.Connection):
+        return
+    cursor = connection.cursor()
+    try:
+        cursor.execute("PRAGMA journal_mode=WAL")
+        cursor.execute(f"PRAGMA busy_timeout={SQLITE_BUSY_TIMEOUT_MS}")
+    finally:
+        cursor.close()
+
+
+SessionLocal = sessionmaker(
+    bind=engine,
+    autoflush=False,
+    autocommit=False,
+    future=True,
+    class_=RetryingSession,
+)
 Base = declarative_base()
 
 
