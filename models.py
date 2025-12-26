@@ -170,6 +170,7 @@ class DailyReport(Base):
     created_at: datetime = Column(DateTime, default=datetime.utcnow, nullable=False)
     last_modified_by: Optional[str] = Column(String(100), nullable=True)
     last_modified_at: Optional[datetime] = Column(DateTime, nullable=True)
+    is_hidden: int = Column(Integer, default=0, nullable=False)
     summary_key_output: str = Column(Text, default="", nullable=False)
     summary_issues: str = Column(Text, default="", nullable=False)
     summary_countermeasures: str = Column(Text, default="", nullable=False)
@@ -275,6 +276,16 @@ class SummaryActualEntry(Base):
     scrapped: int = Column(Integer, default=0, nullable=False)
     imported_at: datetime = Column(DateTime, default=datetime.utcnow, nullable=False)
 
+class AttendanceSummaryDeleteLog(Base):
+    __tablename__ = "attendance_summary_delete_logs"
+
+    id: int = Column(Integer, primary_key=True, index=True)
+    report_id: int = Column(Integer, nullable=False)
+    deleted_by: str = Column(String(100), default="", nullable=False)
+    deleted_at: datetime = Column(DateTime, default=datetime.utcnow, nullable=False)
+    snapshot_json: str = Column(Text, default="", nullable=False)
+
+
 
 def get_db() -> Generator[Session, None, None]:
     db = SessionLocal()
@@ -333,6 +344,10 @@ def _ensure_daily_report_columns() -> None:
             if "last_modified_at" not in existing:
                 conn.exec_driver_sql(
                     "ALTER TABLE daily_reports ADD COLUMN last_modified_at DATETIME"
+                )
+            if "is_hidden" not in existing:
+                conn.exec_driver_sql(
+                    "ALTER TABLE daily_reports ADD COLUMN is_hidden INTEGER NOT NULL DEFAULT 0"
                 )
     except Exception as exc:
         print(f"資料庫欄位檢查失敗: {exc}")

@@ -25,6 +25,7 @@ from auth import verify_password
 from models import (
     DelayEntry,
     SummaryActualEntry,
+    AttendanceSummaryDeleteLog,
     SessionLocal,
     User,
     DailyReport,
@@ -107,6 +108,7 @@ class ModernMainFrame:
         }
         self.delay_pending_records = []
         self.summary_pending_records = []
+        self._summary_pending_seq = 0
         self.summary_dashboard_data = None
         self._cjk_font_ready = False
         self.shift_options = ["Day", "Night"]
@@ -148,21 +150,25 @@ class ModernMainFrame:
 
     def _update_auth_ui(self):
         has_nav = hasattr(self, "nav_buttons")
+        is_admin = bool(self.current_user and self.current_user.get("role") == "admin")
         if self.current_user:
             username = self.current_user.get("username", "")
             role = self.current_user.get("role", "")
-            label = self._t("auth.logged_in_as", "👤 {username} ({role})")
+            label = self._t("auth.logged_in_as", "Logged in as {username} ({role})")
             self.user_info_label.config(text=label.format(username=username, role=role))
-            self.auth_button.config(text=self._t("header.logout", "登出"))
-            if has_nav and "admin" in self.nav_buttons:
-                self.nav_buttons["admin"].config(state="normal")
+            self.auth_button.config(text=self._t("header.logout", "Logout"))
         else:
-            self.user_info_label.config(text=self._t("auth.not_logged_in", "未登入"))
-            self.auth_button.config(text=self._t("header.login", "登入"))
-            if has_nav and "admin" in self.nav_buttons:
-                self.nav_buttons["admin"].config(state="disabled")
+            self.user_info_label.config(text=self._t("auth.not_logged_in", "Not logged in"))
+            self.auth_button.config(text=self._t("header.login", "Login"))
+        if has_nav and "admin" in self.nav_buttons:
+            self._set_admin_button_visible(True)
+            self.nav_buttons["admin"].config(state="normal" if self.current_user else "disabled")
+        if hasattr(self, "admin_user_mgmt"):
+            self.admin_user_mgmt.set_current_user(self.current_user)
 
     def _clear_tree(self, tree):
+        if tree is None or not tree.winfo_exists():
+            return
         for item in tree.get_children():
             tree.delete(item)
 
@@ -672,6 +678,8 @@ class ModernMainFrame:
             )
             btn.pack(fill='x', padx=10, pady=2)
             self.nav_buttons[item_id] = btn
+            if item_id == "admin":
+                self._admin_button_pack_info = btn.pack_info()
             
             # 添加懸停效果提示
             self.add_tooltip(btn, text_key, text_default)
@@ -686,7 +694,7 @@ class ModernMainFrame:
             foreground='white',
             background=self.COLORS['sidebar']
         )
-        self._register_text(self.sidebar_version_label, "header.version", "Version 2.0")
+        self._register_text(self.sidebar_version_label, "header.version", "Version 0.1.2")
         self.sidebar_version_label.pack(side='bottom', pady=(0, 10), padx=20, anchor='w')
         
         # 收合/展開按鈕
@@ -699,6 +707,21 @@ class ModernMainFrame:
         self._position_sidebar_toggle()
         self._set_navigation_locked(self.nav_locked)
     
+    def _set_admin_button_visible(self, visible):
+        if not hasattr(self, "nav_buttons") or "admin" not in self.nav_buttons:
+            return
+        btn = self.nav_buttons["admin"]
+        if visible:
+            if not btn.winfo_ismapped():
+                pack_info = getattr(self, "_admin_button_pack_info", None)
+                if pack_info:
+                    btn.pack(**pack_info)
+                else:
+                    btn.pack(fill='x', padx=10, pady=2)
+        else:
+            if btn.winfo_ismapped():
+                btn.pack_forget()
+
     def create_main_content(self):
         """創建主內容區域"""
         # 內容容器
@@ -786,7 +809,7 @@ class ModernMainFrame:
     def _update_status_bar_info(self):
         if not hasattr(self, "status_info_label"):
             return
-        version_text = self._t("header.version", "Version 2.2.1")
+        version_text = self._t("header.version", "Version 0.1.2")
         db_label = self._t("settings.databasePath", "Database Path:")
         db_path = str(get_database_path())
         info_text = f"{version_text} | {db_label} {db_path} | Create by Pigo Hsiao"
@@ -1496,6 +1519,7 @@ class ModernMainFrame:
         self.summary_dash_tree.configure(yscrollcommand=table_scroll.set)
         table_scroll.pack(side="right", fill="y")
         self.summary_dash_tree.bind("<Double-1>", self._start_summary_dash_cell_edit)
+        self.summary_dash_tree.bind("<Button-3>", self._show_summary_dash_context_menu)
 
         update_frame = ttk.Frame(table_card, style='Card.TFrame')
         update_frame.pack(fill='x', padx=self.layout["card_pad"], pady=(0, self.layout["card_pad"]))
@@ -1914,7 +1938,7 @@ class ModernMainFrame:
             )
 
     def _update_abnormal_history_headers(self):
-        if hasattr(self, "abnormal_equipment_tree"):
+        if hasattr(self, "abnormal_equipment_tree") and self.abnormal_equipment_tree.winfo_exists():
             for col, (key, default) in zip(self.abnormal_equipment_columns, self.abnormal_equipment_header_keys):
                 self.abnormal_equipment_tree.heading(col, text=self._t(key, default))
             widths = {
@@ -1936,7 +1960,7 @@ class ModernMainFrame:
                     stretch=col in ("description", "action_taken", "image_path"),
                     anchor="w" if col in ("description", "action_taken", "image_path") else "center",
                 )
-        if hasattr(self, "abnormal_lot_tree"):
+        if hasattr(self, "abnormal_lot_tree") and self.abnormal_lot_tree.winfo_exists():
             for col, (key, default) in zip(self.abnormal_lot_columns, self.abnormal_lot_header_keys):
                 self.abnormal_lot_tree.heading(col, text=self._t(key, default))
             widths = {
@@ -2052,6 +2076,64 @@ class ModernMainFrame:
             values[col_index] = new_value
             self.summary_dash_tree.item(row_id, values=values)
         self._end_summary_dash_cell_edit()
+
+    def _show_summary_dash_context_menu(self, event):
+        row_id = self.summary_dash_tree.identify_row(event.y)
+        if row_id and row_id not in self.summary_dash_tree.selection():
+            self.summary_dash_tree.selection_set(row_id)
+        menu = tk.Menu(self.summary_dash_tree, tearoff=0)
+        menu.add_command(
+            label=self._t("common.delete", "刪除"),
+            command=self._hide_selected_summary_dash_rows,
+        )
+        try:
+            menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            menu.grab_release()
+
+    def _hide_selected_summary_dash_rows(self):
+        selections = self.summary_dash_tree.selection()
+        if not selections:
+            messagebox.showinfo(
+                self._t("common.info", "資訊"),
+                self._t("common.selectRow", "請先選擇資料"),
+            )
+            return
+        confirm = messagebox.askyesno(
+            self._t("common.confirm", "確認"),
+            self._t("summaryDashboard.confirmDelete", "確定要標示為不顯示嗎？"),
+        )
+        if not confirm:
+            return
+        user_name = ""
+        if self.current_user:
+            user_name = self.current_user.get("username", "") or ""
+        try:
+            with SessionLocal() as db:
+                for item_id in selections:
+                    try:
+                        report_id = int(item_id)
+                    except ValueError:
+                        continue
+                    values = list(self.summary_dash_tree.item(item_id, "values"))
+                    snapshot = dict(zip(self.summary_dash_columns, values))
+                    row = db.query(DailyReport).filter(DailyReport.id == report_id).first()
+                    if not row:
+                        continue
+                    row.is_hidden = 1
+                    row.last_modified_by = user_name
+                    row.last_modified_at = datetime.now()
+                    db.add(
+                        AttendanceSummaryDeleteLog(
+                            report_id=report_id,
+                            deleted_by=user_name,
+                            snapshot_json=json.dumps(snapshot, ensure_ascii=False),
+                        )
+                    )
+                db.commit()
+            self._load_summary_dashboard()
+        except Exception as exc:
+            messagebox.showerror(self._t("common.error", "錯誤"), f"{exc}")
 
     def _update_summary_dash_rows(self):
         if not hasattr(self, "summary_dash_tree"):
@@ -2186,7 +2268,11 @@ class ModernMainFrame:
                 reports = (
                     db.query(DailyReport)
                     .options(joinedload(DailyReport.author))
-                    .filter(DailyReport.date >= start_date, DailyReport.date <= end_date)
+                    .filter(
+                        DailyReport.date >= start_date,
+                        DailyReport.date <= end_date,
+                        DailyReport.is_hidden == 0,
+                    )
                     .order_by(DailyReport.date, DailyReport.shift, DailyReport.area)
                     .all()
                 )
@@ -2828,14 +2914,14 @@ class ModernMainFrame:
         user_tab = ttk.Frame(self.admin_notebook, style='Modern.TFrame')
         self.admin_notebook.add(user_tab, text=self._t("admin.tabUsers", "👥 使用者管理"))
         
-        self.admin_user_mgmt = UserManagementSection(user_tab, self.lang_manager)
+        self.admin_user_mgmt = UserManagementSection(user_tab, self.lang_manager, self.current_user)
         self.admin_user_mgmt.get_widget().pack(fill='both', expand=True, padx=20, pady=20)
         
         # 班別/區域管理分頁
         master_tab = ttk.Frame(self.admin_notebook, style='Modern.TFrame')
         self.admin_notebook.add(master_tab, text=self._t("admin.tabMasterData", "🧩 班別/區域"))
 
-        self.admin_master_data = MasterDataSection(master_tab, self.lang_manager, on_change=self.refresh_shift_area_options)
+        self.admin_master_data = MasterDataSection(master_tab, self.lang_manager, on_change=self.refresh_shift_area_options, current_user=self.current_user)
         self.admin_master_data.get_widget().pack(fill='both', expand=True, padx=20, pady=20)
         
         # 系統設定分頁
@@ -3619,6 +3705,10 @@ class ModernMainFrame:
                     db.add(report)
                 elif report.author_id != author_id:
                     report.author_id = author_id
+                if report.is_hidden:
+                    report.is_hidden = 0
+                    report.last_modified_by = self.current_user.get("username", "")
+                    report.last_modified_at = datetime.now()
                 if not context_only:
                     report.summary_key_output = key_output
                     report.summary_issues = issues
@@ -3903,16 +3993,39 @@ class ModernMainFrame:
         if hasattr(self, "summary_tree"):
             self._clear_tree(self.summary_tree)
         self.summary_pending_records = []
+        self._summary_pending_seq = 0
+
+    def _ensure_summary_pending_ids(self):
+        if not self.summary_pending_records:
+            return
+        max_id = 0
+        for rec in self.summary_pending_records:
+            pid = rec.get("_pending_id")
+            if isinstance(pid, int) and pid > max_id:
+                max_id = pid
+        if max_id > self._summary_pending_seq:
+            self._summary_pending_seq = max_id
+        for rec in self.summary_pending_records:
+            if not isinstance(rec.get("_pending_id"), int):
+                self._summary_pending_seq += 1
+                rec["_pending_id"] = self._summary_pending_seq
+
+    def _find_summary_pending_record(self, pending_id):
+        for rec in self.summary_pending_records:
+            if rec.get("_pending_id") == pending_id:
+                return rec
+        return None
 
     def _delete_selected_summary_pending(self):
         if not self.summary_pending_records:
-            messagebox.showinfo(self._t("common.info", "資訊"), self._t("common.emptyData", "查無資料"))
+            messagebox.showinfo(self._t("common.info", "??"), self._t("common.emptyData", "????"))
             return
+        self._ensure_summary_pending_ids()
         selections = self.summary_tree.selection()
         if not selections:
-            messagebox.showinfo(self._t("common.info", "資訊"), self._t("common.selectRow", "請先選擇一列"))
+            messagebox.showinfo(self._t("common.info", "??"), self._t("common.selectRow", "??????"))
             return
-        indices = []
+        pending_ids = set()
         for item in selections:
             values = self.summary_tree.item(item, "values")
             if not values:
@@ -3920,15 +4033,15 @@ class ModernMainFrame:
             row_id = values[0]
             if isinstance(row_id, str) and row_id.startswith("P"):
                 try:
-                    indices.append(int(row_id[1:]))
+                    pending_ids.add(int(row_id[1:]))
                 except ValueError:
                     continue
-        if not indices:
-            messagebox.showinfo(self._t("common.info", "資訊"), self._t("common.selectRow", "請先選擇一列"))
+        if not pending_ids:
+            messagebox.showinfo(self._t("common.info", "??"), self._t("common.selectRow", "??????"))
             return
-        for idx in sorted(set(indices), reverse=True):
-            if 0 <= idx < len(self.summary_pending_records):
-                del self.summary_pending_records[idx]
+        self.summary_pending_records = [
+            rec for rec in self.summary_pending_records if rec.get("_pending_id") not in pending_ids
+        ]
         self._load_summary_actual()
 
     def _configure_summary_tags(self):
@@ -4042,7 +4155,7 @@ class ModernMainFrame:
             try:
                 parsed_value = datetime.strptime(new_value, "%Y-%m-%d").date()
             except Exception:
-                messagebox.showerror(self._t("common.error", "??"), self._t("errors.invalidDateFormat", "?????? YYYY-MM-DD"))
+                messagebox.showerror(self._t("common.error", "??"), self._t("errors.invalidDateFormat", "?????????? YYYY-MM-DD"))
                 return
         values = list(self.delay_tree.item(row_id, "values"))
         values[col_index] = parsed_value
@@ -4076,7 +4189,7 @@ class ModernMainFrame:
         if row_id and row_id not in self.delay_tree.selection():
             self.delay_tree.selection_set(row_id)
         menu = tk.Menu(self.delay_tree, tearoff=0)
-        menu.add_command(label=self._t("common.delete", "??"), command=self._delete_selected_delay_rows)
+        menu.add_command(label=self._t("common.delete", "刪除"), command=self._delete_selected_delay_rows)
         try:
             menu.tk_popup(event.x_root, event.y_root)
         finally:
@@ -4087,7 +4200,7 @@ class ModernMainFrame:
         if row_id and row_id not in self.summary_tree.selection():
             self.summary_tree.selection_set(row_id)
         menu = tk.Menu(self.summary_tree, tearoff=0)
-        menu.add_command(label=self._t("common.delete", "??"), command=self._delete_selected_summary_rows)
+        menu.add_command(label=self._t("common.delete", "刪除"), command=self._delete_selected_summary_rows)
         try:
             menu.tk_popup(event.x_root, event.y_root)
         finally:
@@ -4096,7 +4209,7 @@ class ModernMainFrame:
     def _delete_selected_delay_rows(self):
         selections = self.delay_tree.selection()
         if not selections:
-            messagebox.showinfo(self._t("common.info", "??"), self._t("common.selectRow", "??????"))
+            messagebox.showinfo(self._t("common.info", "資訊"), self._t("common.selectRow", "請先選擇資料"))
             return
         pending_indices = []
         db_ids = []
@@ -4121,7 +4234,7 @@ class ModernMainFrame:
                     db.query(DelayEntry).filter(DelayEntry.id.in_(db_ids)).delete(synchronize_session=False)
                     db.commit()
             except Exception as exc:
-                messagebox.showerror(self._t("common.error", "??"), f"{exc}")
+                messagebox.showerror(self._t("common.error", "錯誤"), f"{exc}")
                 return
         self._load_delay_entries()
 
@@ -4130,7 +4243,8 @@ class ModernMainFrame:
         if not selections:
             messagebox.showinfo(self._t("common.info", "??"), self._t("common.selectRow", "??????"))
             return
-        pending_indices = []
+        self._ensure_summary_pending_ids()
+        pending_ids = set()
         db_ids = []
         for item in selections:
             values = self.summary_tree.item(item, "values")
@@ -4139,14 +4253,15 @@ class ModernMainFrame:
             row_id = values[0]
             if isinstance(row_id, str) and row_id.startswith("P"):
                 try:
-                    pending_indices.append(int(row_id[1:]))
+                    pending_ids.add(int(row_id[1:]))
                 except ValueError:
                     continue
             else:
                 db_ids.append(row_id)
-        for idx in sorted(set(pending_indices), reverse=True):
-            if 0 <= idx < len(self.summary_pending_records):
-                del self.summary_pending_records[idx]
+        if pending_ids:
+            self.summary_pending_records = [
+                rec for rec in self.summary_pending_records if rec.get("_pending_id") not in pending_ids
+            ]
         if db_ids:
             try:
                 with SessionLocal() as db:
@@ -4427,33 +4542,28 @@ class ModernMainFrame:
         def save():
             try:
                 if is_pending:
-                    idx = int(str(row_id)[1:])
-                    if idx < 0 or idx >= len(self.delay_pending_records):
-                        messagebox.showerror(self._t("common.error", "錯誤"), self._t("common.selectRow", "請先選擇一列"))
+                    try:
+                        pending_id = int(str(row_id)[1:])
+                    except ValueError:
+                        messagebox.showerror(self._t("common.error", "??"), self._t("common.selectRow", "??????"))
+                        return
+                    rec = self._find_summary_pending_record(pending_id)
+                    if not rec:
+                        messagebox.showerror(self._t("common.error", "??"), self._t("common.selectRow", "??????"))
                         return
                     try:
                         new_date = datetime.strptime(vars_map["date"].get().strip(), "%Y-%m-%d").date()
                     except Exception:
-                        messagebox.showerror(self._t("common.error", "錯誤"), self._t("errors.invalidDateFormat", "日期格式需為 YYYY-MM-DD"))
+                        messagebox.showerror(self._t("common.error", "??"), self._t("errors.invalidDateFormat", "?????????? YYYY-MM-DD"))
                         return
-                    rec = self.delay_pending_records[idx]
-                    rec.update(
-                        {
-                            "delay_date": new_date,
-                            "time_range": vars_map["time"].get().strip(),
-                            "reactor": vars_map["reactor"].get().strip(),
-                            "process": vars_map["process"].get().strip(),
-                            "lot": vars_map["lot"].get().strip(),
-                            "wafer": vars_map["wafer"].get().strip(),
-                            "progress": vars_map["progress"].get().strip(),
-                            "prev_steps": vars_map["prev_steps"].get().strip(),
-                            "prev_time": vars_map["prev_time"].get().strip(),
-                            "severity": vars_map["severity"].get().strip(),
-                            "action": vars_map["action"].get().strip(),
-                            "note": vars_map["note"].get().strip(),
-                        }
-                    )
-                    self._render_delay_rows(self.delay_pending_records, pending=True)
+                    rec["summary_date"] = new_date
+                    rec["label"] = vars_map["label"].get().strip()
+                    for key in ["plan", "completed", "in_process", "on_track", "at_risk", "delayed", "no_data", "scrapped"]:
+                        try:
+                            rec[key] = int(vars_map[key].get().strip() or 0)
+                        except Exception:
+                            rec[key] = 0
+                    self._load_summary_actual()
                 else:
                     with SessionLocal() as db:
                         row = db.query(DelayEntry).filter(DelayEntry.id == row_id).first()
@@ -4638,6 +4748,7 @@ class ModernMainFrame:
             return "-" if val == 0 else str(val)
 
         if self.summary_pending_records:
+            self._ensure_summary_pending_ids()
             def pending_sort_key(row):
                 raw_date = row.get("summary_date")
                 if isinstance(raw_date, str):
@@ -4656,7 +4767,7 @@ class ModernMainFrame:
                     "",
                     "end",
                     values=(
-                        f"P{idx}",
+                        f"P{row.get('_pending_id', idx)}",
                         row["summary_date"],
                         row["label"],
                         fmt(row["plan"]),
@@ -4715,14 +4826,38 @@ class ModernMainFrame:
         )
         if not path:
             return
+        sheet_name = None
         ext = os.path.splitext(path)[1].lower()
         try:
             if ext in (".csv", ".txt"):
                 raw_sheet = pd.read_csv(path, header=None, sep=None, engine="python")
             else:
-                raw_sheet = pd.read_excel(path, sheet_name="Summary(Actual)", header=None)
+                xls = pd.ExcelFile(path)
+                sheet_names = sorted(xls.sheet_names, key=str.lower)
+                preferred = "Summary(Actual)"
+                sheet_name = preferred if preferred in sheet_names else sheet_names[0]
+                if len(sheet_names) > 1:
+                    picker = tk.Toplevel(self.parent)
+                    picker.configure(background=self.COLORS['background'])
+                    picker.title(self._t("navigation.summaryActual", "Summary Actual"))
+                    ttk.Label(picker, text=self._t("common.selectSheet", "??????")).pack(padx=10, pady=5)
+                    sheet_var = tk.StringVar(value=sheet_name)
+                    combo = ttk.Combobox(picker, textvariable=sheet_var, values=sheet_names, state="readonly")
+                    combo.pack(padx=10, pady=5)
+                    chosen = {"name": sheet_name}
+
+                    def confirm():
+                        chosen["name"] = sheet_var.get()
+                        picker.destroy()
+
+                    ttk.Button(picker, text=self._t("common.ok", "??"), command=confirm).pack(pady=8)
+                    picker.grab_set()
+                    picker.wait_window()
+                    sheet_name = chosen["name"]
+
+                raw_sheet = pd.read_excel(xls, sheet_name=sheet_name, header=None)
         except Exception as exc:
-            messagebox.showerror(self._t("common.error", "錯誤"), f"{exc}")
+            messagebox.showerror(self._t("common.error", "??"), f"{exc}")
             return
         summary_date = None
         if len(raw_sheet) > 1:
@@ -4740,7 +4875,7 @@ class ModernMainFrame:
             if ext in (".csv", ".txt"):
                 df = pd.read_csv(path, header=2, sep=None, engine="python")
             else:
-                df = pd.read_excel(path, sheet_name="Summary(Actual)", header=2)
+                df = pd.read_excel(xls, sheet_name=sheet_name, header=2)
         except Exception as exc:
             messagebox.showerror(self._t("common.error", "錯誤"), f"{exc}")
             return
@@ -4777,18 +4912,40 @@ class ModernMainFrame:
                 label_val = f"{'' if pd.isna(part_b) else str(part_b).strip()} {'' if pd.isna(part_c) else str(part_c).strip()}".strip()
             if not label_val:
                 continue
+            plan = get_val(row, "plan")
+            completed = get_val(row, "completed")
+            in_process = get_val(row, "inprocess")
+            on_track = get_val(row, "ontrack")
+            at_risk = get_val(row, "atrisk")
+            delayed = get_val(row, "delayed")
+            no_data = get_val(row, "nodata")
+            scrapped = get_val(row, "scrapped")
+            if all(
+                val == 0
+                for val in (
+                    plan,
+                    completed,
+                    in_process,
+                    on_track,
+                    at_risk,
+                    delayed,
+                    no_data,
+                    scrapped,
+                )
+            ):
+                continue
             records.append(
                 {
                     "summary_date": summary_date,
                     "label": label_val,
-                    "plan": get_val(row, "plan"),
-                    "completed": get_val(row, "completed"),
-                    "in_process": get_val(row, "inprocess"),
-                    "on_track": get_val(row, "ontrack"),
-                    "at_risk": get_val(row, "atrisk"),
-                    "delayed": get_val(row, "delayed"),
-                    "no_data": get_val(row, "nodata"),
-                    "scrapped": get_val(row, "scrapped"),
+                    "plan": plan,
+                    "completed": completed,
+                    "in_process": in_process,
+                    "on_track": on_track,
+                    "at_risk": at_risk,
+                    "delayed": delayed,
+                    "no_data": no_data,
+                    "scrapped": scrapped,
                 }
             )
 
@@ -4796,6 +4953,8 @@ class ModernMainFrame:
             messagebox.showinfo(self._t("common.info", "資訊"), self._t("common.emptyData", "查無資料"))
             return
         self.summary_pending_records = records
+        self._summary_pending_seq = 0
+        self._ensure_summary_pending_ids()
         self._load_summary_actual()
         messagebox.showinfo(
             self._t("common.info", "資訊"),
@@ -4817,6 +4976,7 @@ class ModernMainFrame:
                     db.add(SummaryActualEntry(**rec))
                 db.commit()
             self.summary_pending_records = []
+            self._summary_pending_seq = 0
             self._load_summary_actual()
             messagebox.showinfo(self._t("common.success", "成功"), self._t("common.uploadSuccess", "上傳成功"))
         except Exception as exc:
@@ -4876,28 +5036,23 @@ class ModernMainFrame:
         def save():
             try:
                 if is_pending:
-                    idx = int(str(row_id)[1:])
-                    if idx < 0 or idx >= len(self.summary_pending_records):
-                        messagebox.showerror(self._t("common.error", "錯誤"), self._t("common.selectRow", "請先選擇一列"))
+                    try:
+                        pending_id = int(str(row_id)[1:])
+                    except ValueError:
+                        messagebox.showerror(self._t("common.error", "??"), self._t("common.selectRow", "??????"))
+                        return
+                    rec = self._find_summary_pending_record(pending_id)
+                    if not rec:
+                        messagebox.showerror(self._t("common.error", "??"), self._t("common.selectRow", "??????"))
                         return
                     try:
                         new_date = datetime.strptime(vars_map["date"].get().strip(), "%Y-%m-%d").date()
                     except Exception:
-                        messagebox.showerror(self._t("common.error", "錯誤"), self._t("errors.invalidDateFormat", "日期格式需為 YYYY-MM-DD"))
+                        messagebox.showerror(self._t("common.error", "??"), self._t("errors.invalidDateFormat", "?????????? YYYY-MM-DD"))
                         return
-                    rec = self.summary_pending_records[idx]
                     rec["summary_date"] = new_date
                     rec["label"] = vars_map["label"].get().strip()
-                    for key in [
-                        "plan",
-                        "completed",
-                        "in_process",
-                        "on_track",
-                        "at_risk",
-                        "delayed",
-                        "no_data",
-                        "scrapped",
-                    ]:
+                    for key in ["plan", "completed", "in_process", "on_track", "at_risk", "delayed", "no_data", "scrapped"]:
                         try:
                             rec[key] = int(vars_map[key].get().strip() or 0)
                         except Exception:

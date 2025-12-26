@@ -5,7 +5,7 @@
     "login": "登入",
     "logout": "登出",
     "subtitle": "交接管理系統",
-    "version": "版本 2.2.1"
+    "version": "?? 0.1.2"
   },
   "navigation": {
     "home": "首頁",
@@ -241,6 +241,7 @@
     "updateConflict": "該日期/班別/區域已存在其他日報，無法更新。",
     "invalidShift": "請選擇有效班別",
     "invalidArea": "請選擇有效區域",
+    "confirmDelete": "???????????",
     "present": "出勤",
     "absent": "缺勤",
     "rateLineTitle": "出勤率趨勢",
@@ -457,7 +458,8 @@
     "exportFailed": "匯出失敗",
     "tabUsers": "👥 使用者管理",
     "tabTranslations": "🌐 翻譯管理",
-    "tabSettings": "⚙️ 系統設定"
+    "tabSettings": "⚙️ 系統設定",
+    "permissionDenied": "權限不足，無法執行此操作。"
   },
   "password": {
     "change_title": "變更密碼",

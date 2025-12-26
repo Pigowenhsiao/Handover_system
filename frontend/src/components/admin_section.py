@@ -16,7 +16,7 @@ class UserManagementSection:
     提供管理員管理系統使用者的功能
     """
     
-    def __init__(self, parent, lang_manager):
+    def __init__(self, parent, lang_manager, current_user=None):
         """
         初始化使用者管理組件
         
@@ -26,6 +26,8 @@ class UserManagementSection:
         """
         self.parent = parent
         self.lang_manager = lang_manager
+        self.current_user = current_user or {}
+        self._admin_controls = []
         
         # 創建界面
         self.setup_ui()
@@ -43,8 +45,8 @@ class UserManagementSection:
         self.username_label = ttk.Label(self.input_frame, text="使用者名稱:")
         self.username_label.grid(row=0, column=0, sticky=tk.W, padx=(0, 5), pady=2)
         self.username_var = tk.StringVar()
-        username_entry = ttk.Entry(self.input_frame, textvariable=self.username_var, width=20)
-        username_entry.grid(row=0, column=1, sticky=tk.W, pady=2)
+        self.username_entry = ttk.Entry(self.input_frame, textvariable=self.username_var, width=20)
+        self.username_entry.grid(row=0, column=1, sticky=tk.W, pady=2)
         
         # 電子郵件
         self.email_label = ttk.Label(self.input_frame, text="電子郵件:")
@@ -73,6 +75,7 @@ class UserManagementSection:
             width=18
         )
         role_combo.grid(row=1, column=3, sticky=tk.W, pady=2)
+        self.role_combo = role_combo
         
         # 按鈕框架
         button_frame = ttk.Frame(self.input_frame)
@@ -85,6 +88,7 @@ class UserManagementSection:
             command=self.create_user
         )
         self.create_button.pack(side=tk.LEFT, padx=(0, 5))
+        self._admin_controls.append(('create', self.create_button, self.create_button.pack_info()))
         
         # 更新按鈕
         self.update_button = ttk.Button(
@@ -103,6 +107,7 @@ class UserManagementSection:
             state=tk.DISABLED  # 初始禁用直到選擇表格項目
         )
         self.delete_button.pack(side=tk.LEFT)
+        self._admin_controls.append(('delete', self.delete_button, self.delete_button.pack_info()))
         
         # 重設密碼按鈕
         self.reset_password_btn = ttk.Button(
@@ -112,6 +117,7 @@ class UserManagementSection:
             state=tk.DISABLED  # 初始禁用直到選擇使用者
         )
         self.reset_password_btn.pack(side=tk.LEFT, padx=(5, 10))
+        self._admin_controls.append(('reset_password', self.reset_password_btn, self.reset_password_btn.pack_info()))
         
         # 重置按鈕
         self.reset_button = ttk.Button(
@@ -162,7 +168,54 @@ class UserManagementSection:
         
         # 更新界面語言
         self.update_ui_language()
+        self._apply_access_control()
         self.load_users()
+
+    def set_current_user(self, current_user):
+        self.current_user = current_user or {}
+        if not self._ui_ready():
+            return
+        self._apply_access_control()
+
+    def _is_admin(self):
+        return bool(self.current_user and self.current_user.get("role") == "admin")
+
+    def _ui_ready(self):
+        if not hasattr(self, "main_frame"):
+            return False
+        try:
+            return bool(self.main_frame.winfo_exists())
+        except tk.TclError:
+            return False
+
+    def _apply_access_control(self):
+        if not self._ui_ready():
+            return
+        if not hasattr(self, "role_combo"):
+            return
+        if self._is_admin():
+            for _, btn, pack_info in self._admin_controls:
+                if not btn.winfo_exists():
+                    continue
+                if not btn.winfo_ismapped():
+                    btn.pack(**pack_info)
+                btn.config(state=tk.NORMAL)
+            if self.role_combo.winfo_exists():
+                self.role_combo.config(state="readonly")
+            if self.username_entry.winfo_exists():
+                self.username_entry.config(state="normal")
+        else:
+            if self.role_combo.winfo_exists():
+                self.role_combo.set("user")
+                self.role_combo.config(state=tk.DISABLED)
+            if self.username_entry.winfo_exists():
+                self.username_entry.config(state='readonly')
+            if self.create_button.winfo_exists():
+                self.create_button.config(state=tk.NORMAL)
+            if self.delete_button.winfo_exists():
+                self.delete_button.config(state=tk.NORMAL)
+            if self.reset_password_btn.winfo_exists():
+                self.reset_password_btn.config(state=tk.NORMAL)
 
     def load_users(self):
         for item in self.tree.get_children():
@@ -224,6 +277,13 @@ class UserManagementSection:
     
     def create_user(self):
         """創建新使用者"""
+        if not self._is_admin():
+            messagebox.showwarning(
+                self.lang_manager.get_text("common.warning", "Warning"),
+                self.lang_manager.get_text("admin.permissionDenied", "Permission denied")
+            )
+            return
+
         # 驗證輸入字段
         username = self.username_var.get().strip()
         password = self.password_var.get().strip()
@@ -263,6 +323,17 @@ class UserManagementSection:
     
     def update_user(self):
         """更新選定的使用者"""
+        if not self._is_admin():
+            selection = self.tree.selection()
+            if selection:
+                item_values = self.tree.item(selection[0])["values"]
+                if item_values and self.current_user.get("username") != item_values[1]:
+                    messagebox.showwarning(
+                        self.lang_manager.get_text("common.warning", "Warning"),
+                        self.lang_manager.get_text("admin.permissionDenied", "Permission denied")
+                    )
+                    return
+
         selection = self.tree.selection()
         if not selection:
             messagebox.showwarning(
@@ -281,6 +352,8 @@ class UserManagementSection:
                 )
                 return
             role = self.role_var.get().strip() or "user"
+            if not self._is_admin():
+                role = "user"
             password = self.password_var.get().strip()
 
             with SessionLocal() as db:
@@ -317,6 +390,13 @@ class UserManagementSection:
     
     def delete_user(self):
         """刪除選定的使用者"""
+        if not self._is_admin():
+            messagebox.showwarning(
+                self.lang_manager.get_text("common.warning", "Warning"),
+                self.lang_manager.get_text("admin.permissionDenied", "Permission denied")
+            )
+            return
+
         selection = self.tree.selection()
         if not selection:
             messagebox.showwarning(
@@ -373,6 +453,7 @@ class UserManagementSection:
                 
                 # 啟用更新、刪除和重設密碼按鈕
                 self.update_button.config(state=tk.NORMAL)
+                # Allow clicks for non-admin to show permission message
                 self.delete_button.config(state=tk.NORMAL)
                 self.reset_password_btn.config(state=tk.NORMAL)
         else:
@@ -383,6 +464,13 @@ class UserManagementSection:
     
     def reset_password(self):
         """重設選定使用者的密碼"""
+        if not self._is_admin():
+            messagebox.showwarning(
+                self.lang_manager.get_text("common.warning", "Warning"),
+                self.lang_manager.get_text("admin.permissionDenied", "Permission denied")
+            )
+            return
+
         selection = self.tree.selection()
         if not selection:
             messagebox.showwarning(
@@ -457,9 +545,10 @@ class MasterDataSection:
     班別/區域管理介面
     """
 
-    def __init__(self, parent, lang_manager, on_change=None):
+    def __init__(self, parent, lang_manager, on_change=None, current_user=None):
         self.parent = parent
         self.lang_manager = lang_manager
+        self.current_user = current_user or {}
         self.on_change = on_change
         self.selected_shift_id = None
         self.selected_area_id = None
@@ -555,6 +644,11 @@ class MasterDataSection:
         area_scroll.grid(row=2, column=2, sticky="ns")
 
         self.update_ui_language()
+        self._apply_access_control()
+
+    def _apply_access_control(self):
+        return
+
 
     def get_widget(self):
         return self.main_frame
@@ -861,7 +955,7 @@ class TranslationManagementSection:
     提供管理員管理翻譯資源的功能
     """
     
-    def __init__(self, parent, lang_manager):
+    def __init__(self, parent, lang_manager, current_user=None):
         """
         初始化翻譯管理組件
         
@@ -871,6 +965,8 @@ class TranslationManagementSection:
         """
         self.parent = parent
         self.lang_manager = lang_manager
+        self.current_user = current_user or {}
+        self._admin_controls = []
         
         # 創建界面
         self.setup_ui()
@@ -1027,6 +1123,7 @@ class TranslationManagementSection:
         
         # 更新界面語言
         self.update_ui_language()
+        self._apply_access_control()
     
     def update_ui_language(self):
         """根據當前語言更新界面標示"""

@@ -5,7 +5,7 @@
     "login": "Login",
     "logout": "Logout",
     "subtitle": "Handover Management System",
-    "version": "Version 2.2.1"
+    "version": "Version 0.1.2"
   },
   "navigation": {
     "home": "Home",
@@ -241,6 +241,7 @@
     "updateConflict": "Another report already exists for the selected date/shift/area.",
     "invalidShift": "Please select a valid shift",
     "invalidArea": "Please select a valid area",
+    "confirmDelete": "Confirm hide this row?",
     "present": "Present",
     "absent": "Absent",
     "rateLineTitle": "Attendance Rate Trend",
@@ -457,7 +458,8 @@
     "exportFailed": "Export failed",
     "tabUsers": "👥 Users",
     "tabTranslations": "🌐 Translations",
-    "tabSettings": "⚙️ Settings"
+    "tabSettings": "⚙️ Settings",
+    "permissionDenied": "Permission denied."
   },
   "password": {
     "change_title": "Change Password",

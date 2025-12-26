@@ -1,4 +1,4 @@
-# 引き継ぎシステム（デスクトップ版） v2.2.1
+# 引き継ぎシステム（デスクトップ版） V 0.1.2
 
 Tkinter で作成した単機版引き継ぎシステムです。日報入力、出勤、設備異常、異常ロット、出勤統計と履歴照会に対応し、Delay List と Summary Actual のインポート/アップロードも提供します。システムは単機運用（前後端 API なし）で、データは本機の SQLite に保存します。
 
@@ -13,17 +13,10 @@ Tkinter で作成した単機版引き継ぎシステムです。日報入力、
 - Delay List / Summary Actual：Excel インポート → 仮保存 → アップロード。日付範囲で検索・編集。
 - 管理：ユーザー/翻訳/シフト/エリア管理。システム設定でバックアップ間隔を保存。
 
-<<<<<<< Updated upstream
-## 使い方
-1. 依存関係をインストール：`pip install -r requirements.txt`
-2. 起動（モダン UI 推奨）：`python run_modern_system.py`
-3. 起動後、ログイン前に言語を選択。ログイン後、各ページで日報入力・インポート/アップロード・管理を実施。
-=======
 ## 使用方式
 1. 安裝依賴：`pip install -r requirements.txt`
 2. 啟動（建議現代化介面）：`python handover_system.py`
 3. 介面啟動後，登入前可先選擇語言；登入後在各分頁填寫日報、匯入/上傳報表或管理使用者與選項。
->>>>>>> Stashed changes
 
 直接モダン UI を起動（依存チェックなし）：`python start_modern_ui.py`
 
@@ -34,9 +27,11 @@ Tkinter で作成した単機版引き継ぎシステムです。日報入力、
 - システム設定は `handover_settings.json` に保存されます。
 - Pillow は旧版 UI の画像機能のみ必要です。未使用なら不要です。
 
-<<<<<<< Updated upstream
 ## 実行ファイル化
 PyInstaller の固定設定を使用：`pyinstaller handover_modern.spec`
-=======
 
->>>>>>> Stashed changes
+## 更新內容
+- 出勤率表新增右鍵刪除（標示為不顯示）並寫入刪除紀錄。
+- 標示為不顯示的出勤率資料不納入統計，重複輸入同日期/班別/區域會自動恢復顯示。
+- Summary Actual 匯入支援工作表選擇，且全數為 0 的列不匯入。
+- Delay List 與 Summary Actual 表格右鍵刪除功能已恢復。
