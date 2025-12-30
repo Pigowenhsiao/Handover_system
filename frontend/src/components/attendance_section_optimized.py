@@ -264,7 +264,7 @@ class AttendanceSectionOptimized:
         # Regular staff overtime
         self.overtime_regular_title = ttk.Label(
             self.overtime_frame,
-            text=self.lang_manager.get_text("attendance.overtime_regular_title", "Regular Overtime")
+            text=self.lang_manager.get_text("attendance.overtime_regular", "Regular Staff")
         )
         self.overtime_regular_title.grid(row=0, column=0, sticky="w", padx=(0, 10))
 
@@ -280,7 +280,7 @@ class AttendanceSectionOptimized:
 
         self.overtime_regular_notes_label = ttk.Label(
             self.overtime_frame,
-            text=self.lang_manager.get_text("attendance.overtime_regular_notes", "Notes")
+            text=self.lang_manager.get_text("attendance.overtime_notes", "Notes")
         )
         self.overtime_regular_notes_label.grid(row=1, column=0, sticky="nw", padx=(0, 10), pady=(6, 0))
 
@@ -296,7 +296,7 @@ class AttendanceSectionOptimized:
         # Contractor staff overtime
         self.overtime_contract_title = ttk.Label(
             self.overtime_frame,
-            text=self.lang_manager.get_text("attendance.overtime_contract_title", "Contract Overtime")
+            text=self.lang_manager.get_text("attendance.overtime_contract", "Contract Staff")
         )
         self.overtime_contract_title.grid(row=2, column=0, sticky="w", padx=(0, 10), pady=(10, 0))
 
@@ -312,7 +312,7 @@ class AttendanceSectionOptimized:
 
         self.overtime_contract_notes_label = ttk.Label(
             self.overtime_frame,
-            text=self.lang_manager.get_text("attendance.overtime_contract_notes", "Notes")
+            text=self.lang_manager.get_text("attendance.overtime_notes", "Notes")
         )
         self.overtime_contract_notes_label.grid(row=3, column=0, sticky="nw", padx=(0, 10), pady=(6, 0))
 
@@ -338,6 +338,7 @@ class AttendanceSectionOptimized:
         scheduled_entry.grid(row=0, column=1, sticky="w", pady=(0, 10))
         scheduled_entry.bind("<KeyRelease>", lambda e: self.on_data_change(staff_type))
         scheduled_entry.bind("<KeyRelease>", lambda e: self.calculate_rates(), add="+")
+        scheduled_entry.bind("<KeyRelease>", lambda e: self._recalc_absent(staff_type), add="+")
         
         # 出勤
         present_label = ttk.Label(parent, text=f"{self.lang_manager.get_text('common.present', '出勤')}:")
@@ -348,6 +349,7 @@ class AttendanceSectionOptimized:
         present_entry.grid(row=1, column=1, sticky="w", pady=(0, 10))
         present_entry.bind("<KeyRelease>", lambda e: self.on_data_change(staff_type))
         present_entry.bind("<KeyRelease>", lambda e: self.calculate_rates(), add="+")
+        present_entry.bind("<KeyRelease>", lambda e: self._recalc_absent(staff_type), add="+")
         
         # 欠勤
         absent_label = ttk.Label(parent, text=f"{self.lang_manager.get_text('common.absent', '欠勤')}:")
@@ -473,10 +475,10 @@ class AttendanceSectionOptimized:
         self.save_btn.config(text=self.lang_manager.get_text("common.save", "Save"))
 
         self.overtime_frame.config(text=self.lang_manager.get_text("attendance.overtime_title", "Overtime"))
-        self.overtime_regular_title.config(text=self.lang_manager.get_text("attendance.overtime_regular_title", "Regular Overtime"))
-        self.overtime_regular_notes_label.config(text=self.lang_manager.get_text("attendance.overtime_regular_notes", "Notes"))
-        self.overtime_contract_title.config(text=self.lang_manager.get_text("attendance.overtime_contract_title", "Contract Overtime"))
-        self.overtime_contract_notes_label.config(text=self.lang_manager.get_text("attendance.overtime_contract_notes", "Notes"))
+        self.overtime_regular_title.config(text=self.lang_manager.get_text("attendance.overtime_regular", "Regular Staff"))
+        self.overtime_regular_notes_label.config(text=self.lang_manager.get_text("attendance.overtime_notes", "Notes"))
+        self.overtime_contract_title.config(text=self.lang_manager.get_text("attendance.overtime_contract", "Contract Staff"))
+        self.overtime_contract_notes_label.config(text=self.lang_manager.get_text("attendance.overtime_notes", "Notes"))
 
         for staff_type, labels in self.staff_labels.items():
             labels["scheduled"].config(text=f"{self.lang_manager.get_text('common.scheduled', 'Scheduled')}:")
@@ -572,6 +574,24 @@ class AttendanceSectionOptimized:
         self.overall_rate_label.config(text=f"{overall_rate:.1f}%")
         
         self.overall_rate_label.config(foreground=self._get_overall_rate_color(overall_rate))
+    
+    def _recalc_absent(self, staff_type):
+        """依據排班與出勤自動計算缺席人數"""
+        try:
+            if staff_type == "regular":
+                scheduled = int(self.regular_scheduled_var.get() or 0)
+                present = int(self.regular_present_var.get() or 0)
+                target = self.regular_absent_var
+            else:
+                scheduled = int(self.contractor_scheduled_var.get() or 0)
+                present = int(self.contractor_present_var.get() or 0)
+                target = self.contractor_absent_var
+        except ValueError:
+            return
+        new_absent = max(scheduled - present, 0)
+        if target.get() != str(new_absent):
+            target.set(str(new_absent))
+            self.on_data_change(staff_type)
     
     def format_number(self, value):
         """格式化數字（千位分隔符）"""
