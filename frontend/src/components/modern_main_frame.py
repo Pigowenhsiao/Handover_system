@@ -3925,15 +3925,14 @@ class ModernMainFrame:
         try:
             with SessionLocal() as db:
                 rows = db.query(AttendanceEntry).filter_by(report_id=self.active_report_id).all()
-                overtime_row = (
-                    db.query(OvertimeEntry)
-                    .filter_by(report_id=self.active_report_id)
-                    .first()
-                )
+                overtime_rows = db.query(OvertimeEntry).filter_by(report_id=self.active_report_id).all()
             data = {
                 "regular": {"scheduled": 0, "present": 0, "absent": 0, "reason": ""},
                 "contractor": {"scheduled": 0, "present": 0, "absent": 0, "reason": ""},
-                "overtime": {"category": "", "count": "", "notes": ""},
+                "overtime": {
+                    "regular": {"count": "", "notes": ""},
+                    "contract": {"count": "", "notes": ""},
+                },
             }
             for row in rows:
                 category = row.category.lower()
@@ -3947,11 +3946,11 @@ class ModernMainFrame:
                     "absent": row.absent_count,
                     "reason": row.reason or "",
                 }
-            if overtime_row:
-                data["overtime"] = {
-                    "category": overtime_row.category or "",
-                    "count": overtime_row.count,
-                    "notes": overtime_row.notes or "",
+            for ot in overtime_rows:
+                key = "regular" if (ot.category or "").lower().startswith("reg") else "contract"
+                data["overtime"][key] = {
+                    "count": ot.count,
+                    "notes": ot.notes or "",
                 }
             self.attendance_section.set_attendance_data(data)
         except Exception as exc:
@@ -3987,18 +3986,20 @@ class ModernMainFrame:
                 ]
                 db.add_all(entries)
                 overtime_data = data.get("overtime", {})
-                overtime_category = (overtime_data.get("category") or "").strip()
-                overtime_count = int(overtime_data.get("count") or 0)
-                overtime_notes = (overtime_data.get("notes") or "").strip()
-                if overtime_category or overtime_notes or overtime_count:
-                    db.add(
-                        OvertimeEntry(
-                            report_id=self.active_report_id,
-                            category=overtime_category,
-                            count=overtime_count,
-                            notes=overtime_notes,
-                        )
-                    )
+                if isinstance(overtime_data, dict):
+                    for cat_key, db_cat in (("regular", "Regular"), ("contract", "Contract")):
+                        ot = overtime_data.get(cat_key, {}) if isinstance(overtime_data.get(cat_key, {}), dict) else {}
+                        ot_count = int(ot.get("count") or 0)
+                        ot_notes = (ot.get("notes") or "").strip()
+                        if ot_count or ot_notes:
+                            db.add(
+                                OvertimeEntry(
+                                    report_id=self.active_report_id,
+                                    category=db_cat,
+                                    count=ot_count,
+                                    notes=ot_notes,
+                                )
+                            )
                 db.commit()
             self._set_status("status.attendanceSaved", "✅ 出勤資料已儲存")
             return True
@@ -4011,6 +4012,8 @@ class ModernMainFrame:
 
     def _update_delay_headers(self):
         if not hasattr(self, "delay_tree"):
+            return
+        if not self.delay_tree.winfo_exists():
             return
         for col, (key, default) in zip(self.delay_columns, self.delay_header_keys):
             self.delay_tree.heading(col, text=self._t(key, default))

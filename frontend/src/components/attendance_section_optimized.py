@@ -105,17 +105,17 @@ class AttendanceSectionOptimized:
             self.regular_status_canvas.configure(background=colors.get("surface", "#FFFFFF"))
         if self._widget_alive(getattr(self, "contractor_status_canvas", None)):
             self.contractor_status_canvas.configure(background=colors.get("surface", "#FFFFFF"))
-        if self._widget_alive(getattr(self, "overtime_notes_text", None)):
-            text_bg = colors.get("surface", "#FFFFFF")
-            text_fg = colors.get("text_primary", "#212121")
-            if self._is_dark_theme():
-                text_bg = colors.get("surface", "#1E1E1E")
-                text_fg = colors.get("text_primary", "#E6E6E6")
-            self.overtime_notes_text.configure(
-                background=text_bg,
-                foreground=text_fg,
-                insertbackground=text_fg,
-            )
+        for txt in (
+            getattr(self, "overtime_regular_notes_text", None),
+            getattr(self, "overtime_contract_notes_text", None),
+        ):
+            if self._widget_alive(txt):
+                text_bg = colors.get("surface", "#FFFFFF")
+                text_fg = colors.get("text_primary", "#212121")
+                if self._is_dark_theme():
+                    text_bg = colors.get("surface", "#1E1E1E")
+                    text_fg = colors.get("text_primary", "#E6E6E6")
+                txt.configure(background=text_bg, foreground=text_fg, insertbackground=text_fg)
         self.update_status_indicator()
         self.calculate_rates()
 
@@ -251,65 +251,81 @@ class AttendanceSectionOptimized:
         except Exception:
             pass
 
+
     def setup_overtime_section(self):
-        """設置加班輸入區域"""
+        """?"-??r?S???-??,?.?????YY"""
         self.overtime_frame = ttk.LabelFrame(
             self.main_frame,
-            text=self.lang_manager.get_text("attendance.overtime_title", "加班"),
+            text=self.lang_manager.get_text("attendance.overtime_title", "?S???-"),
             padding="10"
         )
         self.overtime_frame.pack(fill="x", pady=(10, 0))
 
-        self.overtime_category_label = ttk.Label(
+        # Regular staff overtime
+        self.overtime_regular_title = ttk.Label(
             self.overtime_frame,
-            text=f"{self.lang_manager.get_text('attendance.overtime_category', '類別')}:"
+            text=self.lang_manager.get_text("attendance.overtime_regular_title", "Regular Overtime")
         )
-        self.overtime_category_label.grid(row=0, column=0, sticky="w", padx=(0, 10), pady=(0, 6))
+        self.overtime_regular_title.grid(row=0, column=0, sticky="w", padx=(0, 10))
 
-        self.overtime_category_var = tk.StringVar(value="")
-        self.overtime_category_code = ""
-        self.overtime_category_combo = ttk.Combobox(
+        self.overtime_regular_count_var = tk.StringVar(value="")
+        self.overtime_regular_count_entry = ttk.Entry(
             self.overtime_frame,
-            textvariable=self.overtime_category_var,
-            width=18,
-            state="readonly"
-        )
-        self.overtime_category_combo.grid(row=0, column=1, sticky="w", pady=(0, 6))
-        self.overtime_category_combo.bind("<<ComboboxSelected>>", self._on_overtime_category_change)
-
-        self.overtime_count_label = ttk.Label(
-            self.overtime_frame,
-            text=f"{self.lang_manager.get_text('attendance.overtime_count', '人數')}:"
-        )
-        self.overtime_count_label.grid(row=0, column=2, sticky="w", padx=(20, 10), pady=(0, 6))
-
-        self.overtime_count_var = tk.StringVar(value="")
-        self.overtime_count_entry = ttk.Entry(
-            self.overtime_frame,
-            textvariable=self.overtime_count_var,
+            textvariable=self.overtime_regular_count_var,
             width=10,
             justify="right"
         )
-        self.overtime_count_entry.grid(row=0, column=3, sticky="w", pady=(0, 6))
-        self.overtime_count_entry.bind("<KeyRelease>", lambda e: self.on_data_change("overtime"))
+        self.overtime_regular_count_entry.grid(row=0, column=1, sticky="w")
+        self.overtime_regular_count_entry.bind("<KeyRelease>", lambda e: self.on_data_change("overtime"))
 
-        self.overtime_notes_label = ttk.Label(
+        self.overtime_regular_notes_label = ttk.Label(
             self.overtime_frame,
-            text=f"{self.lang_manager.get_text('attendance.overtime_notes', '備註')}:"
+            text=self.lang_manager.get_text("attendance.overtime_regular_notes", "Notes")
         )
-        self.overtime_notes_label.grid(row=1, column=0, sticky="nw", padx=(0, 10))
+        self.overtime_regular_notes_label.grid(row=1, column=0, sticky="nw", padx=(0, 10), pady=(6, 0))
 
-        self.overtime_notes_text = tk.Text(
+        self.overtime_regular_notes_text = tk.Text(
             self.overtime_frame,
             width=60,
             height=3,
             wrap="word"
         )
-        self.overtime_notes_text.grid(row=1, column=1, columnspan=3, sticky="ew")
-        self.overtime_notes_text.bind("<KeyRelease>", lambda e: self.on_data_change("overtime"))
+        self.overtime_regular_notes_text.grid(row=1, column=1, columnspan=3, sticky="ew", pady=(6, 0))
+        self.overtime_regular_notes_text.bind("<KeyRelease>", lambda e: self.on_data_change("overtime"))
+
+        # Contractor staff overtime
+        self.overtime_contract_title = ttk.Label(
+            self.overtime_frame,
+            text=self.lang_manager.get_text("attendance.overtime_contract_title", "Contract Overtime")
+        )
+        self.overtime_contract_title.grid(row=2, column=0, sticky="w", padx=(0, 10), pady=(10, 0))
+
+        self.overtime_contract_count_var = tk.StringVar(value="")
+        self.overtime_contract_count_entry = ttk.Entry(
+            self.overtime_frame,
+            textvariable=self.overtime_contract_count_var,
+            width=10,
+            justify="right"
+        )
+        self.overtime_contract_count_entry.grid(row=2, column=1, sticky="w", pady=(10, 0))
+        self.overtime_contract_count_entry.bind("<KeyRelease>", lambda e: self.on_data_change("overtime"))
+
+        self.overtime_contract_notes_label = ttk.Label(
+            self.overtime_frame,
+            text=self.lang_manager.get_text("attendance.overtime_contract_notes", "Notes")
+        )
+        self.overtime_contract_notes_label.grid(row=3, column=0, sticky="nw", padx=(0, 10), pady=(6, 0))
+
+        self.overtime_contract_notes_text = tk.Text(
+            self.overtime_frame,
+            width=60,
+            height=3,
+            wrap="word"
+        )
+        self.overtime_contract_notes_text.grid(row=3, column=1, columnspan=3, sticky="ew", pady=(6, 0))
+        self.overtime_contract_notes_text.bind("<KeyRelease>", lambda e: self.on_data_change("overtime"))
 
         self.overtime_frame.columnconfigure(1, weight=1)
-        self._update_overtime_category_values()
 
     def setup_staff_section(self, parent, staff_type):
         """設置員工區段（正社員或契約社員）"""
@@ -338,9 +354,10 @@ class AttendanceSectionOptimized:
         absent_label.grid(row=2, column=0, sticky="w", padx=(0, 10), pady=(0, 10))
         
         absent_var = tk.StringVar(value="0")
-        absent_entry = ttk.Entry(parent, textvariable=absent_var, width=12, justify="right", state="readonly")
+        absent_entry = ttk.Entry(parent, textvariable=absent_var, width=12, justify="right")
         absent_entry.grid(row=2, column=1, sticky="w", pady=(0, 10))
-        # 缺勤由系統自動計算，避免手動輸入
+        absent_entry.bind("<KeyRelease>", lambda e: self.on_data_change(staff_type))
+        absent_entry.bind("<KeyRelease>", lambda e: self.calculate_rates(), add="+")
         
         # 出勤率指示器
         rate_frame = ttk.Frame(parent)
@@ -397,8 +414,6 @@ class AttendanceSectionOptimized:
             "absent": absent_label,
             "reason": reason_label,
             "rate": rate_title_label,
-            "absent_var": absent_var,
-            "absent_entry": absent_entry,
         }
     
     def setup_statistics_section(self):
@@ -443,45 +458,37 @@ class AttendanceSectionOptimized:
         )
         self.overall_rate_label.grid(row=1, column=1, sticky="e", pady=(5, 0))
 
+
     def update_language(self):
-        """更新語言文字"""
+        """更新語系後重新套用文字"""
         if not self._widget_alive(self.main_frame):
             return
         self.info_label.config(
-            text=self.lang_manager.get_text(
-                "attendance.info",
-                "💡 提示：出勤率 = 出勤人數 ÷ 定員人數 × 100%"
-            )
+            text=self.lang_manager.get_text("attendance.info", "Attendance rate = Present / Scheduled x 100%")
         )
-        self.left_frame.config(text=self.lang_manager.get_text("attendance.regular_staff", "正社員 (Regular Staff)"))
-        self.right_frame.config(text=self.lang_manager.get_text("attendance.contractor_staff", "契約社員 (Contractor Staff)"))
-        self.validate_btn.config(text=self.lang_manager.get_text("attendance.validate", "驗證數據"))
-        self.stats_frame.config(text=self.lang_manager.get_text("attendance.statistics", "統計"))
-        self.save_btn.config(text=self.lang_manager.get_text("common.save", "儲存"))
+        self.left_frame.config(text=self.lang_manager.get_text("attendance.regular_staff", "Regular Staff"))
+        self.right_frame.config(text=self.lang_manager.get_text("attendance.contractor_staff", "Contract Staff"))
+        self.validate_btn.config(text=self.lang_manager.get_text("attendance.validate", "Validate"))
+        self.stats_frame.config(text=self.lang_manager.get_text("attendance.statistics", "Statistics"))
+        self.save_btn.config(text=self.lang_manager.get_text("common.save", "Save"))
 
-        self.overtime_frame.config(text=self.lang_manager.get_text("attendance.overtime_title", "加班"))
-        self.overtime_category_label.config(
-            text=f"{self.lang_manager.get_text('attendance.overtime_category', '類別')}:"
-        )
-        self.overtime_count_label.config(
-            text=f"{self.lang_manager.get_text('attendance.overtime_count', '人數')}:"
-        )
-        self.overtime_notes_label.config(
-            text=f"{self.lang_manager.get_text('attendance.overtime_notes', '備註')}:"
-        )
-        self._update_overtime_category_values()
+        self.overtime_frame.config(text=self.lang_manager.get_text("attendance.overtime_title", "Overtime"))
+        self.overtime_regular_title.config(text=self.lang_manager.get_text("attendance.overtime_regular_title", "Regular Overtime"))
+        self.overtime_regular_notes_label.config(text=self.lang_manager.get_text("attendance.overtime_regular_notes", "Notes"))
+        self.overtime_contract_title.config(text=self.lang_manager.get_text("attendance.overtime_contract_title", "Contract Overtime"))
+        self.overtime_contract_notes_label.config(text=self.lang_manager.get_text("attendance.overtime_contract_notes", "Notes"))
 
         for staff_type, labels in self.staff_labels.items():
-            labels["scheduled"].config(text=f"{self.lang_manager.get_text('common.scheduled', '定員')}:")
-            labels["present"].config(text=f"{self.lang_manager.get_text('common.present', '出勤')}:")
-            labels["absent"].config(text=f"{self.lang_manager.get_text('common.absent', '欠勤')}:")
-            labels["reason"].config(text=f"{self.lang_manager.get_text('common.reason', '理由')}:")
-            labels["rate"].config(text=self.lang_manager.get_text("attendance.rate", "出勤率"))
+            labels["scheduled"].config(text=f"{self.lang_manager.get_text('common.scheduled', 'Scheduled')}:")
+            labels["present"].config(text=f"{self.lang_manager.get_text('common.present', 'Present')}:")
+            labels["absent"].config(text=f"{self.lang_manager.get_text('common.absent', 'Absent')}:")
+            labels["reason"].config(text=f"{self.lang_manager.get_text('common.reason', 'Reason')}:")
+            labels["rate"].config(text=self.lang_manager.get_text("attendance.rate", "Attendance Rate"))
 
-        self.total_scheduled_title.config(text=self.lang_manager.get_text("attendance.total_scheduled", "總定員:"))
-        self.total_present_title.config(text=self.lang_manager.get_text("attendance.total_present", "總出勤:"))
-        self.total_absent_title.config(text=self.lang_manager.get_text("attendance.total_absent", "總欠勤:"))
-        self.overall_rate_title.config(text=self.lang_manager.get_text("attendance.overall_rate", "整體出勤率:"))
+        self.total_scheduled_title.config(text=self.lang_manager.get_text("attendance.total_scheduled", "Total Scheduled:"))
+        self.total_present_title.config(text=self.lang_manager.get_text("attendance.total_present", "Total Present:"))
+        self.total_absent_title.config(text=self.lang_manager.get_text("attendance.total_absent", "Total Absent:"))
+        self.overall_rate_title.config(text=self.lang_manager.get_text("attendance.overall_rate", "Overall Attendance Rate:"))
         self.update_status_indicator()
 
     def _widget_alive(self, widget):
@@ -496,97 +503,42 @@ class AttendanceSectionOptimized:
         self.update_status_indicator()
     
     def update_status_indicator(self):
-        """???????"""
+        """更新狀態指示器"""
         if self.data_modified:
             colors = self._get_theme_colors()
             self.status_label.config(
-                text=self.lang_manager.get_text("attendance.unsaved", "?? ???"),
-                foreground=colors.get("warning", "#ff9800"),
+                text=self.lang_manager.get_text("attendance.unsaved", "⚠️ 未儲存"),
+                foreground=colors.get("warning", "#ff9800")
             )
         else:
             self.status_label.config(text="")
-
-    def _update_absent_display(self, staff_type, scheduled, present):
-        labels = self.staff_labels.get(staff_type, {})
-        absent_var = labels.get("absent_var")
-        absent_label = labels.get("absent")
-        if absent_var is None or absent_label is None:
-            return 0
-        absent = scheduled - present
-        absent_var.set(str(absent))
-        colors = self._get_theme_colors()
-        normal_color = colors.get("text_primary", "#212121")
-        danger_color = colors.get("error", "#F44336")
-        absent_label.config(foreground=danger_color if absent < 0 else normal_color)
-        return absent
-
+    
     def calculate_rates(self):
-        """?????"""
+        """計算出勤率"""
         try:
+            # 計算正社員出勤率
             regular_scheduled = int(self.regular_scheduled_var.get() or 0)
             regular_present = int(self.regular_present_var.get() or 0)
             regular_rate = (regular_present / regular_scheduled * 100) if regular_scheduled > 0 else 0
-            self._update_absent_display("regular", regular_scheduled, regular_present)
-
+            
+            # 計算契約社員出勤率
             contractor_scheduled = int(self.contractor_scheduled_var.get() or 0)
             contractor_present = int(self.contractor_present_var.get() or 0)
             contractor_rate = (contractor_present / contractor_scheduled * 100) if contractor_scheduled > 0 else 0
-            self._update_absent_display("contractor", contractor_scheduled, contractor_present)
-
+            
+            # 更新顯示
             self.regular_rate_label.config(text=f"{regular_rate:.1f}%")
             self.contractor_rate_label.config(text=f"{contractor_rate:.1f}%")
-
+            
+            # 更新顏色和狀態指示燈
             self.update_rate_display("regular", regular_rate)
             self.update_rate_display("contractor", contractor_rate)
-
+            
+            # 更新總計
             self.update_totals(regular_scheduled, regular_present, contractor_scheduled, contractor_present)
+            
         except (ValueError, ZeroDivisionError):
             pass
-
-    def _get_overtime_category_labels(self):
-
-        return {
-            "Regular": self.lang_manager.get_text("attendance.overtime_regular", "正社員"),
-            "Contract": self.lang_manager.get_text("attendance.overtime_contract", "契約社員"),
-        }
-
-    def _update_overtime_category_values(self):
-        if not self._widget_alive(getattr(self, "overtime_category_combo", None)):
-            return
-        labels = self._get_overtime_category_labels()
-        values = sorted(labels.values())
-        self.overtime_category_combo["values"] = [""] + values
-
-        if self.overtime_category_code:
-            self.overtime_category_var.set(labels.get(self.overtime_category_code, self.overtime_category_code))
-        else:
-            self.overtime_category_var.set("")
-
-    def _on_overtime_category_change(self, _event=None):
-        selection = self.overtime_category_var.get()
-        if not selection:
-            self.overtime_category_code = ""
-            self.on_data_change("overtime")
-            return
-        for code, label in self._get_overtime_category_labels().items():
-            if selection == label:
-                self.overtime_category_code = code
-                self.on_data_change("overtime")
-                return
-        self.overtime_category_code = selection
-        self.on_data_change("overtime")
-
-    def _get_overtime_notes(self):
-        if not self._widget_alive(getattr(self, "overtime_notes_text", None)):
-            return ""
-        return self.overtime_notes_text.get("1.0", "end").strip()
-
-    def _set_overtime_notes(self, notes):
-        if not self._widget_alive(getattr(self, "overtime_notes_text", None)):
-            return
-        self.overtime_notes_text.delete("1.0", "end")
-        if notes:
-            self.overtime_notes_text.insert("1.0", notes)
 
     def update_rate_display(self, staff_type, rate):
         """更新出勤率顯示（顏色和狀態燈）"""
@@ -628,106 +580,105 @@ class AttendanceSectionOptimized:
         except (ValueError, TypeError):
             return str(value)
     
+
     def validate_attendance_data(self):
-        """驗證出勤數據的合理性"""
+        """?c-?-%????<??,?"s?s,??^??+??"""
         try:
-            # 獲取數據
+            # ?????-?,?"s
             regular_scheduled = int(self.regular_scheduled_var.get() or "0")
-            regular_present = int(self.regular_present_var.get() or "0") 
+            regular_present = int(self.regular_present_var.get() or "0")
             regular_absent = int(self.regular_absent_var.get() or "0")
-            
+
             contractor_scheduled = int(self.contractor_scheduled_var.get() or "0")
             contractor_present = int(self.contractor_present_var.get() or "0")
             contractor_absent = int(self.contractor_absent_var.get() or "0")
 
-            overtime_count_raw = (self.overtime_count_var.get() or "").strip()
-            overtime_count = 0
-            if overtime_count_raw:
-                overtime_count = int(overtime_count_raw)
+            reg_ot_raw = (self.overtime_regular_count_var.get() or "").strip()
+            con_ot_raw = (self.overtime_contract_count_var.get() or "").strip()
+            reg_ot = int(reg_ot_raw) if reg_ot_raw else 0
+            con_ot = int(con_ot_raw) if con_ot_raw else 0
 
-            # 驗證規則
+            # 驗證
             errors = []
-            
-            # 驗證正社員
+
+            # 正職
             if regular_present + regular_absent > regular_scheduled:
                 errors.append(
                     self.lang_manager.get_text(
                         "attendance.error_regular_exceeds",
-                        "正社員：出勤({present}) + 欠勤({absent}) > 定員({scheduled})"
+                        "Regular staff: present ({present}) + absent ({absent}) > scheduled ({scheduled})"
                     ).format(present=regular_present, absent=regular_absent, scheduled=regular_scheduled)
                 )
-            
+
             if regular_present < 0 or regular_absent < 0 or regular_scheduled < 0:
-                errors.append(self.lang_manager.get_text("attendance.error_regular_negative", "正社員：人數不能為負數"))
-            
-            # 驗證契約社員
+                errors.append(self.lang_manager.get_text("attendance.error_regular_negative", "Regular staff numbers cannot be negative."))
+
+            # 約聘
             if contractor_present + contractor_absent > contractor_scheduled:
                 errors.append(
                     self.lang_manager.get_text(
                         "attendance.error_contractor_exceeds",
-                        "契約社員：出勤({present}) + 欠勤({absent}) > 定員({scheduled})"
+                        "Contract staff: present ({present}) + absent ({absent}) > scheduled ({scheduled})"
                     ).format(present=contractor_present, absent=contractor_absent, scheduled=contractor_scheduled)
                 )
-            
+
             if contractor_present < 0 or contractor_absent < 0 or contractor_scheduled < 0:
-                errors.append(self.lang_manager.get_text("attendance.error_contractor_negative", "契約社員：人數不能為負數"))
+                errors.append(self.lang_manager.get_text("attendance.error_contractor_negative", "Contract staff numbers cannot be negative."))
 
-            if overtime_count < 0:
-                errors.append(self.lang_manager.get_text("attendance.error_overtime_negative", "加班人數不能為負數"))
+            if reg_ot < 0 or con_ot < 0:
+                errors.append(self.lang_manager.get_text("attendance.error_overtime_negative", "Overtime count cannot be negative."))
 
-            # 顯示結果
+            # ??_???????zo
             if errors:
                 error_msg = "\n".join(errors)
                 messagebox.showwarning(
-                    self.lang_manager.get_text("attendance.validation_failed", "驗證失敗"),
+                    self.lang_manager.get_text("attendance.validation_failed", "Validation failed"),
                     error_msg
                 )
                 return False
             else:
-                # 計算出勤率
+                # ?"^?r-????<??Z?
                 regular_rate = (regular_present / regular_scheduled * 100) if regular_scheduled > 0 else 0
                 contractor_rate = (contractor_present / contractor_scheduled * 100) if contractor_scheduled > 0 else 0
-                
-                success_msg = "\n\n".join(
-                    [
-                        self.lang_manager.get_text(
-                            "attendance.validation_summary_intro",
-                            "✅ 所有出勤數據輸入合理。"
-                        ),
-                        self.lang_manager.get_text(
-                            "attendance.validation_summary_regular",
-                            "正社員: 定員 {scheduled}, 出勤 {present}, 欠勤 {absent}, 出勤率 {rate:.1f}%"
-                        ).format(
-                            scheduled=self.format_number(regular_scheduled),
-                            present=self.format_number(regular_present),
-                            absent=self.format_number(regular_absent),
-                            rate=regular_rate,
-                        ),
-                        self.lang_manager.get_text(
-                            "attendance.validation_summary_contractor",
-                            "契約社員: 定員 {scheduled}, 出勤 {present}, 欠勤 {absent}, 出勤率 {rate:.1f}%"
-                        ).format(
-                            scheduled=self.format_number(contractor_scheduled),
-                            present=self.format_number(contractor_present),
-                            absent=self.format_number(contractor_absent),
-                            rate=contractor_rate,
-                        ),
-                    ]
-                )
-                
+
+                success_msg = "\n\n".join([
+                    self.lang_manager.get_text(
+                        "attendance.validation_summary_intro",
+                        "Summary of attendance validation:"
+                    ),
+                    self.lang_manager.get_text(
+                        "attendance.validation_summary_regular",
+                        "Regular staff: scheduled {scheduled}, present {present}, absent {absent}, attendance rate {rate:.1f}%"
+                    ).format(
+                        scheduled=self.format_number(regular_scheduled),
+                        present=self.format_number(regular_present),
+                        absent=self.format_number(regular_absent),
+                        rate=regular_rate,
+                    ),
+                    self.lang_manager.get_text(
+                        "attendance.validation_summary_contractor",
+                        "Contract staff: scheduled {scheduled}, present {present}, absent {absent}, attendance rate {rate:.1f}%"
+                    ).format(
+                        scheduled=self.format_number(contractor_scheduled),
+                        present=self.format_number(contractor_present),
+                        absent=self.format_number(contractor_absent),
+                        rate=contractor_rate,
+                    ),
+                ])
+
                 messagebox.showinfo(
-                    self.lang_manager.get_text("attendance.validation_success", "驗證成功"),
+                    self.lang_manager.get_text("attendance.validation_success", "Validation passed"),
                     success_msg
                 )
                 return True
-                
+
         except ValueError:
             messagebox.showerror(
-                self.lang_manager.get_text("common.error", "錯誤"),
-                self.lang_manager.get_text("attendance.invalid_numbers", "請確保輸入的都是有效數字")
+                self.lang_manager.get_text("common.error", "?O_???"),
+                self.lang_manager.get_text("attendance.invalid_numbers", "??<????????,?.?s,????~_?o%?^?,?--")
             )
             return False
-    
+
     def save_attendance_data(self):
         """儲存出勤數據"""
         if hasattr(self.app_instance, "ensure_report_context"):
@@ -745,10 +696,13 @@ class AttendanceSectionOptimized:
                 self.lang_manager.get_text("attendance.saved", "出勤數據已儲存")
             )
     
+
     def get_attendance_data(self):
-        """獲取當前出勤數據"""
-        overtime_count_raw = (self.overtime_count_var.get() or "").strip()
-        overtime_count = int(overtime_count_raw) if overtime_count_raw else 0
+        """?????-??%?????<??,?"s"""
+        reg_notes = self.overtime_regular_notes_text.get("1.0", "end").strip()
+        con_notes = self.overtime_contract_notes_text.get("1.0", "end").strip()
+        reg_ot_raw = (self.overtime_regular_count_var.get() or "").strip()
+        con_ot_raw = (self.overtime_contract_count_var.get() or "").strip()
         return {
             "regular": {
                 "scheduled": int(self.regular_scheduled_var.get() or "0"),
@@ -763,21 +717,27 @@ class AttendanceSectionOptimized:
                 "reason": self.contractor_reason_var.get()
             },
             "overtime": {
-                "category": self.overtime_category_code or "",
-                "count": overtime_count,
-                "notes": self._get_overtime_notes(),
+                "regular": {
+                    "count": int(reg_ot_raw) if reg_ot_raw else 0,
+                    "notes": reg_notes,
+                },
+                "contract": {
+                    "count": int(con_ot_raw) if con_ot_raw else 0,
+                    "notes": con_notes,
+                },
             },
         }
-    
+
+
     def set_attendance_data(self, data):
-        """設置出勤數據"""
+        """?"-??r????<??,?"s"""
         if 'regular' in data:
             regular_data = data['regular']
             self.regular_scheduled_var.set(str(regular_data.get('scheduled', 0)))
             self.regular_present_var.set(str(regular_data.get('present', 0)))
             self.regular_absent_var.set(str(regular_data.get('absent', 0)))
             self.regular_reason_var.set(regular_data.get('reason', ''))
-        
+
         if 'contractor' in data:
             contractor_data = data['contractor']
             self.contractor_scheduled_var.set(str(contractor_data.get('scheduled', 0)))
@@ -785,18 +745,30 @@ class AttendanceSectionOptimized:
             self.contractor_absent_var.set(str(contractor_data.get('absent', 0)))
             self.contractor_reason_var.set(contractor_data.get('reason', ''))
 
-        overtime_data = data.get("overtime", {})
-        self.overtime_category_code = overtime_data.get("category", "") or ""
-        self._update_overtime_category_values()
-        overtime_count = overtime_data.get("count", "")
-        self.overtime_count_var.set("" if overtime_count in ("", None) else str(overtime_count))
-        self._set_overtime_notes(overtime_data.get("notes", ""))
+        overtime_data = data.get("overtime", {}) or {}
+        reg_ot = overtime_data.get("regular", {}) or {}
+        con_ot = overtime_data.get("contract", {}) or {}
 
-        # 重新計算
+        reg_count = reg_ot.get("count", "")
+        con_count = con_ot.get("count", "")
+        self.overtime_regular_count_var.set("" if reg_count in ("", None) else str(reg_count))
+        self.overtime_contract_count_var.set("" if con_count in ("", None) else str(con_count))
+
+        if self._widget_alive(getattr(self, "overtime_regular_notes_text", None)):
+            self.overtime_regular_notes_text.delete("1.0", "end")
+            if reg_ot.get("notes"):
+                self.overtime_regular_notes_text.insert("1.0", reg_ot.get("notes"))
+
+        if self._widget_alive(getattr(self, "overtime_contract_notes_text", None)):
+            self.overtime_contract_notes_text.delete("1.0", "end")
+            if con_ot.get("notes"):
+                self.overtime_contract_notes_text.insert("1.0", con_ot.get("notes"))
+
+        # ????-??"^?r-
         self.calculate_rates()
         self.data_modified = False
         self.update_status_indicator()
-    
+
     def get_widget(self):
         """獲取組件主框架"""
         return self.main_frame
@@ -813,10 +785,10 @@ class AttendanceSectionOptimized:
         self.contractor_absent_var.set("0")
         self.contractor_reason_var.set("")
 
-        self.overtime_category_code = ""
-        self.overtime_category_var.set("")
-        self.overtime_count_var.set("")
-        self._set_overtime_notes("")
+        self.overtime_regular_count_var.set("")
+        self.overtime_contract_count_var.set("")
+        self.overtime_regular_notes_text.delete('1.0', 'end')
+        self.overtime_contract_notes_text.delete('1.0', 'end')
 
         self.data_modified = False
         self.calculate_rates()
