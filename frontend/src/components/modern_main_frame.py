@@ -1740,31 +1740,38 @@ class ModernMainFrame:
             ("lot.notes", "特記事項"),
         ]
 
+        table_inner = ttk.Frame(table_frame, style='Card.TFrame')
+        table_inner.pack(fill='both', expand=True)
+
         self.summary_query_tree = ttk.Treeview(
-            table_frame,
+            table_inner,
             columns=cols,
             show="headings",
             height=14,
             selectmode="extended",
         )
         self._update_summary_query_headers()
-        self.summary_query_tree.pack(side='left', fill='both', expand=True)
         summary_scroll = ttk.Scrollbar(
-            table_frame,
+            table_inner,
             orient="vertical",
             command=self.summary_query_tree.yview,
         )
-        summary_scroll.pack(side="right", fill="y")
         summary_scroll_x = ttk.Scrollbar(
-            table_frame,
+            table_inner,
             orient="horizontal",
             command=self.summary_query_tree.xview,
         )
-        summary_scroll_x.pack(side="bottom", fill="x")
         self.summary_query_tree.configure(
             yscrollcommand=summary_scroll.set,
             xscrollcommand=summary_scroll_x.set,
         )
+        table_inner.columnconfigure(0, weight=1)
+        table_inner.rowconfigure(0, weight=1)
+        self.summary_query_tree.grid(row=0, column=0, sticky="nsew")
+        summary_scroll.grid(row=0, column=1, sticky="ns")
+        summary_scroll_x.grid(row=1, column=0, sticky="ew")
+        self.summary_query_tree.bind("<Double-1>", self._edit_summary_query_row)
+        self.summary_query_tree.bind("<Button-3>", self._show_summary_query_context_menu)
 
         self._load_summary_query_records()
 
@@ -1857,6 +1864,8 @@ class ModernMainFrame:
         eq_scroll = ttk.Scrollbar(equipment_frame, orient="vertical", command=self.abnormal_equipment_tree.yview)
         self.abnormal_equipment_tree.configure(yscrollcommand=eq_scroll.set)
         eq_scroll.pack(side="right", fill="y")
+        self.abnormal_equipment_tree.bind("<Double-1>", lambda e: self._edit_abnormal_record("equip", e))
+        self.abnormal_equipment_tree.bind("<Button-3>", lambda e: self._show_abnormal_context_menu("equip", e))
 
         lot_card = self.create_card(self.abnormal_scroll_frame, '📦', "cards.abnormalLotHistory", "異常批次歷史")
         lot_card.pack(fill='both', expand=True)
@@ -1892,6 +1901,8 @@ class ModernMainFrame:
         lot_scroll = ttk.Scrollbar(lot_frame, orient="vertical", command=self.abnormal_lot_tree.yview)
         self.abnormal_lot_tree.configure(yscrollcommand=lot_scroll.set)
         lot_scroll.pack(side="right", fill="y")
+        self.abnormal_lot_tree.bind("<Double-1>", lambda e: self._edit_abnormal_record("lot", e))
+        self.abnormal_lot_tree.bind("<Button-3>", lambda e: self._show_abnormal_context_menu("lot", e))
 
         self._load_abnormal_history()
 
@@ -2059,6 +2070,154 @@ class ModernMainFrame:
                     stretch=col in ("description", "status", "notes"),
                     anchor="w" if col in ("description", "status", "notes") else "center",
                 )
+
+    def _parse_abnormal_item_id(self, item_id):
+        try:
+            parts = str(item_id).split(":")
+            if len(parts) != 3 or parts[0] != "ab":
+                return None
+            return {"type": parts[1], "log_id": int(parts[2])}
+        except Exception:
+            return None
+
+    def _show_abnormal_context_menu(self, kind, event):
+        tree = self.abnormal_equipment_tree if kind == "equip" else self.abnormal_lot_tree
+        if not tree or not tree.winfo_exists():
+            return
+        row_id = tree.identify_row(event.y)
+        if row_id and row_id not in tree.selection():
+            tree.selection_set(row_id)
+        menu = tk.Menu(tree, tearoff=0)
+        menu.add_command(label=self._t("common.delete", "Delete"), command=lambda: self._delete_abnormal_records(kind))
+        menu.tk_popup(event.x_root, event.y_root)
+
+    def _delete_abnormal_records(self, kind):
+        tree = self.abnormal_equipment_tree if kind == "equip" else self.abnormal_lot_tree
+        if not tree or not tree.winfo_exists():
+            return
+        selections = tree.selection()
+        if not selections:
+            return
+        if not messagebox.askyesno(
+            self._t("common.warning", "Warning"),
+            self._t("summaryDashboard.confirmDelete", "Confirm hide this row?"),
+        ):
+            return
+        try:
+            with SessionLocal() as db:
+                for item_id in selections:
+                    meta = self._parse_abnormal_item_id(item_id)
+                    if not meta:
+                        continue
+                    if kind == "equip":
+                        db.query(EquipmentLog).filter_by(id=meta["log_id"]).delete(synchronize_session=False)
+                    else:
+                        db.query(LotLog).filter_by(id=meta["log_id"]).delete(synchronize_session=False)
+                db.commit()
+            self._load_abnormal_history()
+        except Exception as exc:
+            messagebox.showerror(self._t("common.error", "Error"), f"{exc}")
+
+    def _edit_abnormal_record(self, kind, event=None):
+        tree = self.abnormal_equipment_tree if kind == "equip" else self.abnormal_lot_tree
+        if not tree or not tree.winfo_exists():
+            return
+        row_id = tree.identify_row(event.y) if event is not None else None
+        if row_id and row_id not in tree.selection():
+            tree.selection_set(row_id)
+        if not row_id:
+            selections = tree.selection()
+            row_id = selections[0] if selections else None
+        if not row_id:
+            return
+        meta = self._parse_abnormal_item_id(row_id)
+        if not meta:
+            return
+        values = list(tree.item(row_id, "values"))
+        if kind == "equip":
+            (
+                _date,
+                _shift,
+                _area,
+                _author,
+                equip_id,
+                description,
+                start_time,
+                impact_qty,
+                action_taken,
+                image_path,
+            ) = values
+            fields = [
+                ("equip_id", self._t("equipment.equipId", "Equip ID"), equip_id),
+                ("description", self._t("summaryQuery.equipmentDescription", "Equipment Description"), description),
+                ("start_time", self._t("equipment.startTime", "Start Time"), start_time),
+                ("impact_qty", self._t("equipment.impactQty", "Impact Qty"), impact_qty),
+                ("action_taken", self._t("equipment.actionTaken", "Action Taken"), action_taken),
+                ("image_path", self._t("common.image", "Image"), image_path),
+            ]
+        else:
+            (
+                _date,
+                _shift,
+                _area,
+                _author,
+                lot_id,
+                description,
+                status,
+                notes,
+            ) = values
+            fields = [
+                ("lot_id", self._t("lot.lotId", "Lot ID"), lot_id),
+                ("description", self._t("summaryQuery.lotDescription", "Lot Description"), description),
+                ("status", self._t("lot.status", "Status"), status),
+                ("notes", self._t("lot.notes", "Notes"), notes),
+            ]
+
+        dlg = tk.Toplevel(self.parent)
+        dlg.configure(background=self.COLORS["background"])
+        dlg.title(self._t("abnormalHistory.editTitle", "Edit Abnormal Record"))
+        dlg.columnconfigure(1, weight=1)
+
+        vars_map = {}
+        for idx, (key, label_text, value) in enumerate(fields):
+            ttk.Label(dlg, text=label_text).grid(row=idx, column=0, padx=6, pady=4, sticky="e")
+            var = tk.StringVar(value=str(value))
+            ttk.Entry(dlg, textvariable=var, width=50).grid(row=idx, column=1, padx=6, pady=4, sticky="ew")
+            vars_map[key] = var
+
+        def save():
+            try:
+                with SessionLocal() as db:
+                    if kind == "equip":
+                        log = db.query(EquipmentLog).filter_by(id=meta["log_id"]).first()
+                        if not log:
+                            return
+                        log.equip_id = vars_map["equip_id"].get().strip()
+                        log.description = vars_map["description"].get().strip()
+                        log.start_time = vars_map["start_time"].get().strip()
+                        impact_raw = vars_map["impact_qty"].get().strip()
+                        log.impact_qty = int(impact_raw) if impact_raw else 0
+                        log.action_taken = vars_map["action_taken"].get().strip()
+                        log.image_path = vars_map["image_path"].get().strip()
+                    else:
+                        log = db.query(LotLog).filter_by(id=meta["log_id"]).first()
+                        if not log:
+                            return
+                        log.lot_id = vars_map["lot_id"].get().strip()
+                        log.description = vars_map["description"].get().strip()
+                        log.status = vars_map["status"].get().strip()
+                        log.notes = vars_map["notes"].get().strip()
+                    db.commit()
+                dlg.destroy()
+                self._load_abnormal_history()
+            except ValueError:
+                messagebox.showerror(self._t("common.error", "Error"), self._t("attendance.invalid_numbers", "Please enter valid numbers."))
+            except Exception as exc:
+                messagebox.showerror(self._t("common.error", "Error"), f"{exc}")
+
+        save_btn = ttk.Button(dlg, style="Primary.TButton", command=save)
+        self._register_text(save_btn, "common.save", "Save", scope="page")
+        save_btn.grid(row=len(fields), column=0, columnspan=2, pady=10)
 
     def _build_attendance_notes(self, regular_reason, contract_reason):
         parts = []
@@ -2520,6 +2679,7 @@ class ModernMainFrame:
                     .join(DailyReport)
                     .options(joinedload(EquipmentLog.report).joinedload(DailyReport.author))
                     .filter(DailyReport.date >= start_date, DailyReport.date <= end_date)
+                    .filter(DailyReport.is_hidden == 0)
                 )
                 if shift_code:
                     equipment_query = equipment_query.filter(DailyReport.shift == shift_code)
@@ -2537,6 +2697,7 @@ class ModernMainFrame:
                     .join(DailyReport)
                     .options(joinedload(LotLog.report).joinedload(DailyReport.author))
                     .filter(DailyReport.date >= start_date, DailyReport.date <= end_date)
+                    .filter(DailyReport.is_hidden == 0)
                 )
                 if shift_code:
                     lot_query = lot_query.filter(DailyReport.shift == shift_code)
@@ -2558,6 +2719,7 @@ class ModernMainFrame:
                 self.abnormal_equipment_tree.insert(
                     "",
                     "end",
+                    iid=f"ab:equip:{row.id}",
                     values=(
                         report.date.strftime("%Y-%m-%d"),
                         shift_display,
@@ -2581,6 +2743,7 @@ class ModernMainFrame:
                 self.abnormal_lot_tree.insert(
                     "",
                     "end",
+                    iid=f"ab:lot:{row.id}",
                     values=(
                         report.date.strftime("%Y-%m-%d"),
                         shift_display,
@@ -4069,6 +4232,163 @@ class ModernMainFrame:
                 anchor=anchor,
             )
 
+    def _parse_summary_query_item_id(self, item_id):
+        try:
+            parts = str(item_id).split(":")
+            if len(parts) < 3 or parts[0] != "sq":
+                return None
+            report_id = int(parts[1])
+            if parts[2] == "summary":
+                return {"report_id": report_id, "type": "summary", "log_id": None}
+            if len(parts) >= 4 and parts[2] in ("equip", "lot"):
+                return {"report_id": report_id, "type": parts[2], "log_id": int(parts[3])}
+        except Exception:
+            return None
+        return None
+
+    def _show_summary_query_context_menu(self, event):
+        if not hasattr(self, "summary_query_tree") or not self.summary_query_tree.winfo_exists():
+            return
+        row_id = self.summary_query_tree.identify_row(event.y)
+        if row_id and row_id not in self.summary_query_tree.selection():
+            self.summary_query_tree.selection_set(row_id)
+        menu = tk.Menu(self.summary_query_tree, tearoff=0)
+        menu.add_command(label=self._t("common.delete", "刪除"), command=self._delete_summary_query_rows)
+        menu.tk_popup(event.x_root, event.y_root)
+
+    def _delete_summary_query_rows(self):
+        if not hasattr(self, "summary_query_tree"):
+            return
+        selections = self.summary_query_tree.selection()
+        if not selections:
+            return
+        if not messagebox.askyesno(
+            self._t("common.warning", "警告"),
+            self._t("summaryDashboard.confirmDelete", "確定要標示為不顯示嗎？"),
+        ):
+            return
+        try:
+            with SessionLocal() as db:
+                for item_id in selections:
+                    meta = self._parse_summary_query_item_id(item_id)
+                    if not meta:
+                        continue
+                    if meta["type"] == "equip":
+                        db.query(EquipmentLog).filter_by(id=meta["log_id"]).delete(synchronize_session=False)
+                    elif meta["type"] == "lot":
+                        db.query(LotLog).filter_by(id=meta["log_id"]).delete(synchronize_session=False)
+                    else:
+                        report = db.query(DailyReport).filter_by(id=meta["report_id"]).first()
+                        if report:
+                            report.is_hidden = 1
+                            report.last_modified_by = self.current_user.get("username", "") if self.current_user else ""
+                            report.last_modified_at = datetime.now()
+                db.commit()
+            self._load_summary_query_records()
+        except Exception as exc:
+            messagebox.showerror(self._t("common.error", "錯誤"), f"{exc}")
+
+    def _edit_summary_query_row(self, event=None):
+        if not hasattr(self, "summary_query_tree") or not self.summary_query_tree.winfo_exists():
+            return
+        if event is not None:
+            row_id = self.summary_query_tree.identify_row(event.y)
+        else:
+            selections = self.summary_query_tree.selection()
+            row_id = selections[0] if selections else None
+        if not row_id:
+            return
+        if row_id not in self.summary_query_tree.selection():
+            self.summary_query_tree.selection_set(row_id)
+        meta = self._parse_summary_query_item_id(row_id)
+        if not meta:
+            return
+        values = list(self.summary_query_tree.item(row_id, "values"))
+        row_data = dict(zip(self.summary_query_columns, values))
+
+        dlg = tk.Toplevel(self.parent)
+        dlg.configure(background=self.COLORS["background"])
+        dlg.title(self._t("summaryQuery.editTitle", "Edit Summary Query"))
+        dlg.columnconfigure(1, weight=1)
+
+        info_text = f"{row_data.get('date', '')} / {row_data.get('shift', '')} / {row_data.get('area', '')}"
+        ttk.Label(dlg, text=info_text).grid(row=0, column=0, columnspan=2, padx=6, pady=(6, 4), sticky="w")
+
+        fields = [
+            ("key_output", self._t("summaryQuery.keyOutput", "Key Machine Output"), row_data.get("key_output", "")),
+            ("key_issues", self._t("summaryQuery.keyIssues", "Key Issues"), row_data.get("key_issues", "")),
+            ("countermeasures", self._t("summaryQuery.countermeasures", "Countermeasures"), row_data.get("countermeasures", "")),
+        ]
+
+        if meta["type"] == "equip":
+            fields.extend(
+                [
+                    ("equip_id", self._t("equipment.equipId", "Equip ID"), row_data.get("equip_id", "")),
+                    ("equip_description", self._t("summaryQuery.equipmentDescription", "Equipment Description"), row_data.get("equip_description", "")),
+                    ("equip_start_time", self._t("equipment.startTime", "Start Time"), row_data.get("equip_start_time", "")),
+                    ("equip_impact_qty", self._t("equipment.impactQty", "Impact Qty"), row_data.get("equip_impact_qty", "")),
+                    ("equip_action", self._t("equipment.actionTaken", "Action Taken"), row_data.get("equip_action", "")),
+                    ("equip_image", self._t("common.image", "Image"), row_data.get("equip_image", "")),
+                ]
+            )
+        elif meta["type"] == "lot":
+            fields.extend(
+                [
+                    ("lot_id", self._t("lot.lotId", "Lot ID"), row_data.get("lot_id", "")),
+                    ("lot_description", self._t("summaryQuery.lotDescription", "Lot Description"), row_data.get("lot_description", "")),
+                    ("lot_status", self._t("lot.status", "Status"), row_data.get("lot_status", "")),
+                    ("lot_notes", self._t("lot.notes", "Notes"), row_data.get("lot_notes", "")),
+                ]
+            )
+
+        vars_map = {}
+        for idx, (key, label_text, value) in enumerate(fields, start=1):
+            ttk.Label(dlg, text=label_text).grid(row=idx, column=0, padx=6, pady=4, sticky="e")
+            var = tk.StringVar(value=str(value))
+            ttk.Entry(dlg, textvariable=var, width=50).grid(row=idx, column=1, padx=6, pady=4, sticky="ew")
+            vars_map[key] = var
+
+        def save():
+            try:
+                with SessionLocal() as db:
+                    report = db.query(DailyReport).filter_by(id=meta["report_id"]).first()
+                    if report:
+                        report.summary_key_output = vars_map["key_output"].get().strip()
+                        report.summary_issues = vars_map["key_issues"].get().strip()
+                        report.summary_countermeasures = vars_map["countermeasures"].get().strip()
+                        report.last_modified_by = self.current_user.get("username", "") if self.current_user else ""
+                        report.last_modified_at = datetime.now()
+
+                    if meta["type"] == "equip":
+                        log = db.query(EquipmentLog).filter_by(id=meta["log_id"]).first()
+                        if log:
+                            log.equip_id = vars_map["equip_id"].get().strip()
+                            log.description = vars_map["equip_description"].get().strip()
+                            log.start_time = vars_map["equip_start_time"].get().strip()
+                            impact_raw = vars_map["equip_impact_qty"].get().strip()
+                            log.impact_qty = int(impact_raw) if impact_raw else 0
+                            log.action_taken = vars_map["equip_action"].get().strip()
+                            log.image_path = vars_map["equip_image"].get().strip()
+                    elif meta["type"] == "lot":
+                        log = db.query(LotLog).filter_by(id=meta["log_id"]).first()
+                        if log:
+                            log.lot_id = vars_map["lot_id"].get().strip()
+                            log.description = vars_map["lot_description"].get().strip()
+                            log.status = vars_map["lot_status"].get().strip()
+                            log.notes = vars_map["lot_notes"].get().strip()
+
+                    db.commit()
+                dlg.destroy()
+                self._load_summary_query_records()
+            except ValueError:
+                messagebox.showerror(self._t("common.error", "錯誤"), self._t("attendance.invalid_numbers", "請輸入有效數字"))
+            except Exception as exc:
+                messagebox.showerror(self._t("common.error", "錯誤"), f"{exc}")
+
+        save_btn = ttk.Button(dlg, style="Primary.TButton", command=save)
+        self._register_text(save_btn, "common.save", "儲存", scope="page")
+        save_btn.grid(row=len(fields) + 1, column=0, columnspan=2, pady=10)
+
     def _clear_delay_view(self):
         if hasattr(self, "delay_tree"):
             self._clear_tree(self.delay_tree)
@@ -4736,6 +5056,7 @@ class ModernMainFrame:
                     db.query(DailyReport)
                     .filter(DailyReport.date >= start_date)
                     .filter(DailyReport.date <= end_date)
+                    .filter(DailyReport.is_hidden == 0)
                 )
                 if shift_code:
                     query = query.filter(DailyReport.shift == shift_code)
@@ -4798,6 +5119,7 @@ class ModernMainFrame:
                         self.summary_query_tree.insert(
                             "",
                             "end",
+                            iid=f"sq:{row.id}:equip:{log.id}",
                             values=summary_values + tuple(equip_values) + tuple(lot_blanks),
                         )
                     for log in lot_logs:
@@ -4810,12 +5132,14 @@ class ModernMainFrame:
                         self.summary_query_tree.insert(
                             "",
                             "end",
+                            iid=f"sq:{row.id}:lot:{log.id}",
                             values=summary_values + tuple(equip_blanks) + tuple(lot_values),
                         )
                 else:
                     self.summary_query_tree.insert(
                         "",
                         "end",
+                        iid=f"sq:{row.id}:summary",
                         values=summary_values + tuple(equip_blanks) + tuple(lot_blanks),
                     )
         except Exception as exc:

@@ -243,6 +243,8 @@ class UserManagementSection:
             )
     
     def update_ui_language(self):
+        if not self._widget_alive(getattr(self, "main_frame", None)):
+            return
         """根據當前語言更新界面標示"""
         # 更新框架標題
         self.main_frame.config(text=self.lang_manager.get_text("admin.userManagement", "使用者管理"))
