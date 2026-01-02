@@ -2136,6 +2136,21 @@ class ModernMainFrame:
             self.summary_dash_tree.item(row_id, values=values)
         self._end_summary_dash_cell_edit()
 
+
+    def _show_summary_dash_context_menu(self, event):
+        if not hasattr(self, "summary_dash_tree") or not self.summary_dash_tree.winfo_exists():
+            return
+        row_id = self.summary_dash_tree.identify_row(event.y)
+        if row_id and row_id not in self.summary_dash_tree.selection():
+            self.summary_dash_tree.selection_set(row_id)
+        menu = tk.Menu(self.summary_dash_tree, tearoff=0)
+        menu.add_command(label=self._t("summaryDashboard.update", "??"), command=self._update_summary_dash_rows)
+        menu.add_command(label=self._t("common.refresh", "????"), command=self._load_summary_dashboard)
+        try:
+            menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            menu.grab_release()
+
     def _update_abnormal_history_headers(self):
         if hasattr(self, "abnormal_equipment_tree") and self.abnormal_equipment_tree.winfo_exists():
             for col, (key, default) in zip(self.abnormal_equipment_columns, self.abnormal_equipment_header_keys):
