@@ -2144,12 +2144,43 @@ class ModernMainFrame:
         if row_id and row_id not in self.summary_dash_tree.selection():
             self.summary_dash_tree.selection_set(row_id)
         menu = tk.Menu(self.summary_dash_tree, tearoff=0)
-        menu.add_command(label=self._t("summaryDashboard.update", "??"), command=self._update_summary_dash_rows)
-        menu.add_command(label=self._t("common.refresh", "????"), command=self._load_summary_dashboard)
+        menu.add_command(label=self._t("summaryDashboard.update", "Update"), command=self._update_summary_dash_rows)
+        menu.add_command(label=self._t("common.delete", "Delete"), command=self._delete_summary_dash_rows)
+        menu.add_command(label=self._t("common.refresh", "Refresh"), command=self._load_summary_dashboard)
         try:
             menu.tk_popup(event.x_root, event.y_root)
         finally:
             menu.grab_release()
+
+    def _delete_summary_dash_rows(self):
+        if not hasattr(self, "summary_dash_tree") or not self.summary_dash_tree.winfo_exists():
+            return
+        selections = self.summary_dash_tree.selection()
+        if not selections:
+            messagebox.showinfo(self._t("common.info", "Info"), self._t("common.selectRow", "Please select a row."))
+            return
+        if not messagebox.askyesno(
+            self._t("common.warning", "Warning"),
+            self._t("summaryDashboard.confirmDelete", "Confirm hide this row?"),
+        ):
+            return
+        try:
+            with SessionLocal() as db:
+                for item_id in selections:
+                    try:
+                        report_id = int(item_id)
+                    except ValueError:
+                        continue
+                    report = db.query(DailyReport).filter_by(id=report_id).first()
+                    if not report:
+                        continue
+                    report.is_hidden = 1
+                    report.last_modified_by = self.current_user.get("username", "") if self.current_user else ""
+                    report.last_modified_at = datetime.now()
+                db.commit()
+            self._load_summary_dashboard()
+        except Exception as exc:
+            messagebox.showerror(self._t("common.error", "Error"), f"{exc}")
 
     def _update_abnormal_history_headers(self):
         if hasattr(self, "abnormal_equipment_tree") and self.abnormal_equipment_tree.winfo_exists():

@@ -241,7 +241,7 @@
     "updateConflict": "該日期/班別/區域已存在其他日報，無法更新。",
     "invalidShift": "請選擇有效班別",
     "invalidArea": "請選擇有效區域",
-    "confirmDelete": "???????????",
+    "confirmDelete": "確定要標示為不顯示嗎？",
     "present": "出勤",
     "absent": "缺勤",
     "rateLineTitle": "出勤率趨勢",
