@@ -1,0 +1,13 @@
+dist/
+build/
+dist/ 
+.venv/
+.codex/
+.gemini/
+.qwen/
+.spec/
+.specify/
+Removeable/
+git_token
+
+

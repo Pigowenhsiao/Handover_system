@@ -1,0 +1,11 @@
+## 1. Implementation
+- [x] 1.1 Add shared UI helper module(s) for section headers, labeled inputs, and button rows
+- [x] 1.2 Add shared Treeview/table helper for column setup, styling, and context menus
+- [x] 1.3 Add shared attendance/overtime validation and totals helpers
+- [x] 1.4 Add shared report key/date/shift/area helpers and settings access
+- [x] 1.5 Add shared i18n widget registration and translation helper
+- [x] 1.6 Add shared import pipeline helpers for Delay List and Summary Actual
+- [x] 1.7 Update UI modules to use helpers (start from item 1 and proceed sequentially)
+- [x] 1.8 Update tests/verification scripts as needed
+- [x] 1.9 Update specs and docs (`@fun.md`, `@API.md`)
+- [x] 1.10 Run verification scripts and record manual test checklist

@@ -1,0 +1,88 @@
+# データモデル (Data Model)
+
+本プロジェクトは SQLAlchemy + SQLite を使用します。以下は現行のテーブルとカラム概要です。
+
+## 1. ユーザー (User)
+- **id** (INTEGER, PK)
+- **username** (VARCHAR(50), UNIQUE, NOT NULL)
+- **password_hash** (VARCHAR(128), NOT NULL)
+- **role** (VARCHAR(20), NOT NULL, default = 'user')
+
+## 2. シフト選択 (ShiftOption)
+- **id** (INTEGER, PK)
+- **name** (VARCHAR(50), UNIQUE, NOT NULL) 例：Day, Night
+
+## 3. エリア選択 (AreaOption)
+- **id** (INTEGER, PK)
+- **name** (VARCHAR(50), UNIQUE, NOT NULL) 例：etching_D, etching_E, litho, thin_film
+
+## 4. 日報 (DailyReport)
+- **id** (INTEGER, PK)
+- **date** (DATE, NOT NULL)
+- **shift** (VARCHAR(20), NOT NULL)
+- **area** (VARCHAR(50), NOT NULL)
+- **author_id** (INTEGER, FK → User.id, NOT NULL)
+- **created_at** (DATETIME, NOT NULL, default = now)
+- **summary_key_output** (TEXT, NOT NULL, default = '')
+- **summary_issues** (TEXT, NOT NULL, default = '')
+- **summary_countermeasures** (TEXT, NOT NULL, default = '')
+
+## 5. 出勤記録 (AttendanceEntry)
+- **id** (INTEGER, PK)
+- **report_id** (INTEGER, FK → DailyReport.id, NOT NULL)
+- **category** (VARCHAR(20), NOT NULL) 例：Regular / Contract
+- **scheduled_count** (INTEGER, NOT NULL, default = 0)
+- **present_count** (INTEGER, NOT NULL, default = 0)
+- **absent_count** (INTEGER, NOT NULL, default = 0)
+- **reason** (TEXT, NOT NULL, default = '')
+
+## 6. 設備異常 (EquipmentLog)
+- **id** (INTEGER, PK)
+- **report_id** (INTEGER, FK → DailyReport.id, NOT NULL)
+- **equip_id** (VARCHAR(50), NOT NULL)
+- **description** (TEXT, NOT NULL)
+- **start_time** (VARCHAR(50), NOT NULL, default = '')
+- **impact_qty** (INTEGER, NOT NULL, default = 0)
+- **action_taken** (TEXT, NOT NULL, default = '')
+- **image_path** (VARCHAR(255), NULL)
+
+## 7. 異常ロット (LotLog)
+- **id** (INTEGER, PK)
+- **report_id** (INTEGER, FK → DailyReport.id, NOT NULL)
+- **lot_id** (VARCHAR(50), NOT NULL)
+- **description** (TEXT, NOT NULL)
+- **status** (TEXT, NOT NULL, default = '')
+- **notes** (TEXT, NOT NULL, default = '')
+
+## 8. Delay List (DelayEntry)
+- **id** (INTEGER, PK)
+- **delay_date** (DATE, NOT NULL)
+- **time_range** (VARCHAR(50), NOT NULL, default = '')
+- **reactor** (VARCHAR(50), NOT NULL, default = '')
+- **process** (VARCHAR(100), NOT NULL, default = '')
+- **lot** (VARCHAR(50), NOT NULL, default = '')
+- **wafer** (VARCHAR(50), NOT NULL, default = '')
+- **progress** (VARCHAR(100), NOT NULL, default = '')
+- **prev_steps** (VARCHAR(100), NOT NULL, default = '')
+- **prev_time** (VARCHAR(50), NOT NULL, default = '')
+- **severity** (VARCHAR(50), NOT NULL, default = '')
+- **action** (TEXT, NOT NULL, default = '')
+- **note** (TEXT, NOT NULL, default = '')
+- **imported_at** (DATETIME, NOT NULL, default = now)
+
+## 9. Summary Actual (SummaryActualEntry)
+- **id** (INTEGER, PK)
+- **summary_date** (DATE, NOT NULL)
+- **label** (VARCHAR(200), NOT NULL, default = '')
+- **plan** (INTEGER, NOT NULL, default = 0)
+- **completed** (INTEGER, NOT NULL, default = 0)
+- **in_process** (INTEGER, NOT NULL, default = 0)
+- **on_track** (INTEGER, NOT NULL, default = 0)
+- **at_risk** (INTEGER, NOT NULL, default = 0)
+- **delayed** (INTEGER, NOT NULL, default = 0)
+- **no_data** (INTEGER, NOT NULL, default = 0)
+- **scrapped** (INTEGER, NOT NULL, default = 0)
+- **imported_at** (DATETIME, NOT NULL, default = now)
+
+## 10. システム設定 (Local Settings)
+- **handover_settings.json**：ローカル設定ファイル。`auto_backup` と `backup_interval_days` を保存

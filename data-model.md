@@ -1,0 +1,93 @@
+# データモデル (Data Model)
+
+本システムは単機デスクトップ版で、データは SQLite（`data/handover_system.db`）に保存します。
+
+## 1. ユーザー (users)
+- **id** (INTEGER, PK)
+- **username** (VARCHAR(50), UNIQUE, NOT NULL)
+- **password_hash** (VARCHAR(128), NOT NULL)
+- **role** (VARCHAR(20), NOT NULL, default = 'user')
+
+## 2. シフト選択 (shift_options)
+- **id** (INTEGER, PK)
+- **name** (VARCHAR(50), UNIQUE, NOT NULL)
+
+## 3. エリア選択 (area_options)
+- **id** (INTEGER, PK)
+- **name** (VARCHAR(50), UNIQUE, NOT NULL)
+
+## 4. 日報 (daily_reports)
+- **id** (INTEGER, PK)
+- **date** (DATE, NOT NULL)
+- **shift** (VARCHAR(20), NOT NULL)
+- **area** (VARCHAR(50), NOT NULL)
+- **author_id** (INTEGER, FK → users.id)
+- **created_at** (DATETIME, NOT NULL, default = now)
+- **summary_key_output** (TEXT, NOT NULL, default = '')
+- **summary_issues** (TEXT, NOT NULL, default = '')
+- **summary_countermeasures** (TEXT, NOT NULL, default = '')
+
+## 5. 出勤記録 (attendance_entries)
+- **id** (INTEGER, PK)
+- **report_id** (INTEGER, FK → daily_reports.id)
+- **category** (VARCHAR(20), NOT NULL) 例：Regular / Contract
+- **scheduled_count** (INTEGER, NOT NULL, default = 0)
+- **present_count** (INTEGER, NOT NULL, default = 0)
+- **absent_count** (INTEGER, NOT NULL, default = 0)
+- **reason** (TEXT, NOT NULL, default = '')
+
+## 6. 設備異常 (equipment_logs)
+- **id** (INTEGER, PK)
+- **report_id** (INTEGER, FK → daily_reports.id)
+- **equip_id** (VARCHAR(50), NOT NULL)
+- **description** (TEXT, NOT NULL, default = '')
+- **start_time** (VARCHAR(50), NOT NULL, default = '')
+- **impact_qty** (INTEGER, NOT NULL, default = 0)
+- **action_taken** (TEXT, NOT NULL, default = '')
+- **image_path** (VARCHAR(255), NULL)
+
+## 7. 異常ロット (lot_logs)
+- **id** (INTEGER, PK)
+- **report_id** (INTEGER, FK → daily_reports.id)
+- **lot_id** (VARCHAR(50), NOT NULL, default = '')
+- **description** (TEXT, NOT NULL, default = '')
+- **status** (TEXT, NOT NULL, default = '')
+- **notes** (TEXT, NOT NULL, default = '')
+
+## 8. Delay List (delay_entries)
+- **id** (INTEGER, PK)
+- **delay_date** (DATE, NOT NULL)
+- **time_range** (VARCHAR(50), NOT NULL, default = '')
+- **reactor** (VARCHAR(50), NOT NULL, default = '')
+- **process** (VARCHAR(100), NOT NULL, default = '')
+- **lot** (VARCHAR(50), NOT NULL, default = '')
+- **wafer** (VARCHAR(50), NOT NULL, default = '')
+- **progress** (VARCHAR(100), NOT NULL, default = '')
+- **prev_steps** (VARCHAR(100), NOT NULL, default = '')
+- **prev_time** (VARCHAR(50), NOT NULL, default = '')
+- **severity** (VARCHAR(50), NOT NULL, default = '')
+- **action** (TEXT, NOT NULL, default = '')
+- **note** (TEXT, NOT NULL, default = '')
+- **imported_at** (DATETIME, NOT NULL, default = now)
+
+## 9. Summary Actual (summary_actual_entries)
+- **id** (INTEGER, PK)
+- **summary_date** (DATE, NOT NULL)
+- **label** (VARCHAR(200), NOT NULL, default = '')
+- **plan** (INTEGER, NOT NULL, default = 0)
+- **completed** (INTEGER, NOT NULL, default = 0)
+- **in_process** (INTEGER, NOT NULL, default = 0)
+- **on_track** (INTEGER, NOT NULL, default = 0)
+- **at_risk** (INTEGER, NOT NULL, default = 0)
+- **delayed** (INTEGER, NOT NULL, default = 0)
+- **no_data** (INTEGER, NOT NULL, default = 0)
+- **scrapped** (INTEGER, NOT NULL, default = 0)
+- **imported_at** (DATETIME, NOT NULL, default = now)
+
+## 10. ローカル設定 (handover_settings.json)
+- **auto_backup** (BOOLEAN)
+- **backup_interval_days** (INTEGER)
+
+## 11. 関連関係
+- users 1 → N daily_reports
+- daily_reports 1 → N attendance_entries / equipment_logs / lot_logs
