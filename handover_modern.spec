@@ -1,11 +1,11 @@
-ㄓㄦ# -*- mode: python ; coding: utf-8 -*-
+# -*- mode: python ; coding: utf-8 -*-
 
 from pathlib import Path
 import sys
 from PyInstaller.utils.hooks import collect_all
-testusertestuser@example.com
+
 spec_path = Path(globals().get("SPEC", sys.argv[0])).resolve()
-project_root = spec_path.parentTest123
+project_root = spec_path.parent
 
 
 
@@ -50,13 +50,13 @@ exe = EXE(
     [],
     exclude_binaries=True,
     name="HandoverSystem",
-    debug=False,
+    debug=True,
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,
-    console=False,
+    console=True,
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
