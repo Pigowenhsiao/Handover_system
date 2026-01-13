@@ -58,6 +58,84 @@ class AttendanceSectionOptimized:
     def _is_dark_theme(self):
         return getattr(self.app_instance, "theme_mode", "light") == "dark"
 
+    def _get_ui_scale(self):
+        if self.app_instance and hasattr(self.app_instance, "_ui_scale"):
+            try:
+                return float(self.app_instance._ui_scale)
+            except (TypeError, ValueError):
+                return 1.0
+        try:
+            return float(self.parent.tk.call("tk", "scaling"))
+        except Exception:
+            return 1.0
+
+    def _font(self, size, weight=None, slant=None):
+        scale = self._get_ui_scale()
+        scaled = max(6, int(round(size * scale)))
+        parts = ["TkDefaultFont", scaled]
+        if weight:
+            parts.append(weight)
+        if slant:
+            parts.append(slant)
+        return tuple(parts)
+
+    def _apply_font_scaling(self):
+        if self._widget_alive(getattr(self, "info_label", None)):
+            self.info_label.configure(font=self._font(9, slant="italic"))
+        if self._widget_alive(getattr(self, "status_label", None)):
+            self.status_label.configure(font=self._font(9, weight="bold"))
+        for labels in self.staff_labels.values():
+            labels["scheduled"].configure(font=self._font(10))
+            labels["present"].configure(font=self._font(10))
+            labels["absent"].configure(font=self._font(10))
+            labels["reason"].configure(font=self._font(10))
+            labels["rate"].configure(font=self._font(9, weight="bold"))
+        if self._widget_alive(getattr(self, "regular_rate_label", None)):
+            self.regular_rate_label.configure(font=self._font(16, weight="bold"))
+        if self._widget_alive(getattr(self, "contractor_rate_label", None)):
+            self.contractor_rate_label.configure(font=self._font(16, weight="bold"))
+        for widget_name in (
+            "total_scheduled_title",
+            "total_present_title",
+            "total_absent_title",
+            "overtime_regular_total_title",
+            "overtime_contract_total_title",
+            "overtime_total_title",
+            "overall_rate_title",
+        ):
+            widget = getattr(self, widget_name, None)
+            if self._widget_alive(widget):
+                widget.configure(font=self._font(10))
+        for widget_name in (
+            "total_scheduled_label",
+            "total_present_label",
+            "total_absent_label",
+            "overtime_regular_total_label",
+            "overtime_contract_total_label",
+            "overtime_total_label",
+        ):
+            widget = getattr(self, widget_name, None)
+            if self._widget_alive(widget):
+                widget.configure(font=self._font(10, weight="bold"))
+        if self._widget_alive(getattr(self, "overall_rate_label", None)):
+            self.overall_rate_label.configure(font=self._font(12, weight="bold"))
+        for widget_name in (
+            "overtime_regular_title",
+            "overtime_contract_title",
+            "overtime_regular_notes_label",
+            "overtime_contract_notes_label",
+        ):
+            widget = getattr(self, widget_name, None)
+            if self._widget_alive(widget):
+                widget.configure(font=self._font(10))
+        for widget_name in (
+            "overtime_regular_notes_text",
+            "overtime_contract_notes_text",
+        ):
+            widget = getattr(self, widget_name, None)
+            if self._widget_alive(widget):
+                widget.configure(font=self._font(10))
+
     def _apply_styles(self):
         style = ttk.Style()
         colors = self._get_theme_colors()
@@ -85,15 +163,17 @@ class AttendanceSectionOptimized:
         )
 
         style.configure("Modified.TEntry", fieldbackground=bg_colors["modified"])
+        style.configure("Accent.TButton", font=self._font(10, weight="bold"))
         style.configure(
             "Save.TButton",
-            font=("TkDefaultFont", 10, "bold"),
+            font=self._font(10, weight="bold"),
             background=colors["success"],
             foreground="white",
         )
 
     def apply_theme(self):
         self._apply_styles()
+        self._apply_font_scaling()
         colors = self._get_theme_colors()
         if self._widget_alive(getattr(self, "info_label", None)):
             self.info_label.configure(foreground=colors.get("text_secondary", "gray"))
@@ -159,7 +239,7 @@ class AttendanceSectionOptimized:
             text=self.lang_manager.get_text(
                 "attendance.info", "💡 提示：出勤率 = 出勤人數 ÷ 定員人數 × 100%"
             ),
-            font=("TkDefaultFont", 9, "italic"),
+            font=self._font(9, slant="italic"),
             foreground="gray",
         )
         self.info_label.pack(side="left")
@@ -168,7 +248,7 @@ class AttendanceSectionOptimized:
         self.status_label = ttk.Label(
             info_frame,
             text="",  # 空表示未變更
-            font=("TkDefaultFont", 9, "bold"),
+            font=self._font(9, weight="bold"),
         )
         self.status_label.pack(side="right")
 
@@ -244,10 +324,10 @@ class AttendanceSectionOptimized:
         try:
             style = ttk.Style()
             colors = self._get_theme_colors()
-            style.configure("Accent.TButton", font=("TkDefaultFont", 10, "bold"))
+            style.configure("Accent.TButton", font=self._font(10, weight="bold"))
             style.configure(
                 "Save.TButton",
-                font=("TkDefaultFont", 10, "bold"),
+                font=self._font(10, weight="bold"),
                 background=colors.get("success", "#4caf50"),
                 foreground="white",
             )
@@ -404,12 +484,12 @@ class AttendanceSectionOptimized:
         rate_title_label = ttk.Label(
             rate_frame,
             text=self.lang_manager.get_text("attendance.rate", "出勤率"),
-            font=("TkDefaultFont", 9, "bold"),
+            font=self._font(9, weight="bold"),
         )
         rate_title_label.pack()
 
         rate_label = ttk.Label(
-            rate_frame, text="0%", font=("TkDefaultFont", 16, "bold"), foreground="gray"
+            rate_frame, text="0%", font=self._font(16, weight="bold"), foreground="gray"
         )
         rate_label.pack(pady=(5, 10))
 
@@ -462,7 +542,7 @@ class AttendanceSectionOptimized:
         )
         self.total_scheduled_title.grid(row=0, column=0, sticky="w")
         self.total_scheduled_label = ttk.Label(
-            self.stats_frame, text="0", font=("TkDefaultFont", 10, "bold")
+            self.stats_frame, text="0", font=self._font(10, weight="bold")
         )
         self.total_scheduled_label.grid(row=0, column=1, sticky="e", padx=(10, 20))
 
@@ -475,7 +555,7 @@ class AttendanceSectionOptimized:
         self.total_present_label = ttk.Label(
             self.stats_frame,
             text="0",
-            font=("TkDefaultFont", 10, "bold"),
+            font=self._font(10, weight="bold"),
             foreground="#2e7d32",
         )
         self.total_present_label.grid(row=0, column=3, sticky="e", padx=(10, 20))
@@ -489,7 +569,7 @@ class AttendanceSectionOptimized:
         self.total_absent_label = ttk.Label(
             self.stats_frame,
             text="0",
-            font=("TkDefaultFont", 10, "bold"),
+            font=self._font(10, weight="bold"),
             foreground="#c62828",
         )
         self.total_absent_label.grid(row=0, column=5, sticky="e")
@@ -503,7 +583,7 @@ class AttendanceSectionOptimized:
         )
         self.overtime_regular_total_title.grid(row=0, column=6, sticky="w")
         self.overtime_regular_total_label = ttk.Label(
-            self.stats_frame, text="0", font=("TkDefaultFont", 10, "bold")
+            self.stats_frame, text="0", font=self._font(10, weight="bold")
         )
         self.overtime_regular_total_label.grid(
             row=0, column=7, sticky="e", padx=(10, 20)
@@ -517,7 +597,7 @@ class AttendanceSectionOptimized:
         )
         self.overtime_contract_total_title.grid(row=0, column=8, sticky="w")
         self.overtime_contract_total_label = ttk.Label(
-            self.stats_frame, text="0", font=("TkDefaultFont", 10, "bold")
+            self.stats_frame, text="0", font=self._font(10, weight="bold")
         )
         self.overtime_contract_total_label.grid(
             row=0, column=9, sticky="e", padx=(10, 20)
@@ -531,7 +611,7 @@ class AttendanceSectionOptimized:
         )
         self.overtime_total_title.grid(row=0, column=10, sticky="w")
         self.overtime_total_label = ttk.Label(
-            self.stats_frame, text="0", font=("TkDefaultFont", 10, "bold")
+            self.stats_frame, text="0", font=self._font(10, weight="bold")
         )
         self.overtime_total_label.grid(row=0, column=11, sticky="e")
 
@@ -542,7 +622,7 @@ class AttendanceSectionOptimized:
         )
         self.overall_rate_title.grid(row=1, column=0, sticky="w", pady=(5, 0))
         self.overall_rate_label = ttk.Label(
-            self.stats_frame, text="0%", font=("TkDefaultFont", 12, "bold")
+            self.stats_frame, text="0%", font=self._font(12, weight="bold")
         )
         self.overall_rate_label.grid(row=1, column=1, sticky="e", pady=(5, 0))
 

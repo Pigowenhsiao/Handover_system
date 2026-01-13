@@ -308,7 +308,9 @@
     "databaseInitBody": "選擇的資料庫不存在，是否從目前資料庫複製資料？選擇否將建立空白資料庫。",
     "databaseInitCopyFailed": "無法複製目前資料庫：{error}",
     "databaseInitCreateFailed": "無法建立空白資料庫：{error}",
-    "saveFailed": "設定儲存失敗：{error}"
+    "saveFailed": "設定儲存失敗：{error}",
+    "fontSize": "????",
+    "autoScale": "????????"
   },
   "stats": {
     "dailyReports": "今日報表",

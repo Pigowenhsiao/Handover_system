@@ -304,6 +304,9 @@ This script is procedural only (no function definitions).
 | `setup_styles` | Initialize style configuration. |
 | `_get_theme_colors` | Resolve theme colors. |
 | `_is_dark_theme` | Detect dark theme mode. |
+| `_get_ui_scale` | Resolve the current UI scale for font sizing. |
+| `_font` | Build a scaled TkDefaultFont tuple for widgets. |
+| `_apply_font_scaling` | Apply scaled fonts to attendance widgets. |
 | `_apply_styles` | Apply themed widget styles. |
 | `apply_theme` | Apply theme to widgets. |
 | `_get_rate_colors` | Choose colors based on rate. |
@@ -543,6 +546,16 @@ This script is procedural only (no function definitions).
 | `_save_settings_data` | Save settings JSON. |
 | `_load_theme_mode` | Load persisted theme mode. |
 | `_persist_theme_setting` | Save current theme mode. |
+| `_clamp_ui_scale` | Clamp UI scale to supported range. |
+| `_calculate_auto_ui_scale` | Compute UI scale from screen resolution. |
+| `_set_tk_scaling` | Apply Tk scaling factor. |
+| `_persist_ui_scale_settings` | Save UI scale settings. |
+| `_init_ui_scale_settings` | Load and apply UI scale settings on startup. |
+| `_update_ui_scale_controls` | Refresh font size label and button state. |
+| `_apply_ui_scale` | Apply UI scale and refresh UI. |
+| `_adjust_ui_scale` | Increase or decrease UI scale. |
+| `_on_auto_ui_scale_toggle` | Handle auto-scale toggle changes. |
+| `_on_root_configure` | Sync summary chart height on window resize. |
 | `_register_text_widget` | Track text widgets for theme. |
 | `_register_canvas_widget` | Track canvas widgets for theme. |
 | `_apply_text_widget_colors` | Apply theme colors to text widgets. |
@@ -606,6 +619,19 @@ This script is procedural only (no function definitions).
 | `_get_chart_theme` | Resolve chart theme settings. |
 | `_apply_chart_axes_theme` | Apply chart theme to axes. |
 | `_clear_summary_charts` | Clear summary charts. |
+| `_get_summary_chart_target_height` | Compute default chart height (1/3 of window plus scale). |
+| `_get_summary_chart_target_width` | Compute minimum chart width based on labels. |
+| `_apply_summary_chart_width` | Apply chart scroll width and scrollregion. |
+| `_apply_summary_chart_height` | Apply chart card height and optionally replot. |
+| `_sync_summary_chart_height` | Sync chart height when auto sizing is enabled. |
+| `_schedule_summary_chart_height_sync` | Debounce chart height sync. |
+| `_schedule_summary_chart_render` | Debounce chart re-render. |
+| `_summary_charts_ready` | Check chart widget sizes before rendering. |
+| `_schedule_summary_chart_retry` | Retry chart rendering when layout is not ready. |
+| `_render_summary_charts_if_visible` | Render charts only when summary page is active. |
+| `_start_summary_chart_resize` | Begin manual chart resize drag. |
+| `_drag_summary_chart_resize` | Resize chart height during drag. |
+| `_end_summary_chart_resize` | Finish drag and re-render charts. |
 | `_render_summary_charts` | Render summary charts. |
 | `create_delay_list_page` | Build delay list page. |
 | `create_summary_actual_page` | Build summary actual page. |

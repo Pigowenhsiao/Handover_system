@@ -90,6 +90,13 @@ class ModernMainFrame:
             self.DARK_COLORS if self.theme_mode == "dark" else self.LIGHT_COLORS
         )
         ModernMainFrame.COLORS = self.COLORS
+        self._ui_scale_min = 0.25
+        self._ui_scale_max = 2.25
+        self._ui_scale_step = 0.05
+        self._ui_scale = 1.0
+        self._auto_ui_scale = True
+        self._base_named_fonts = {}
+        self._init_ui_scale_settings()
         self._text_widgets = []
         self._canvas_widgets = []
         self.report_context = {"date": "", "shift": "", "area": ""}
@@ -117,6 +124,18 @@ class ModernMainFrame:
         self.summary_dashboard_data = None
         self.summary_pie_frame = None
         self.summary_bar_frame = None
+        self.summary_charts_card = None
+        self.summary_chart_scroll_canvas = None
+        self.summary_chart_scroll_window = None
+        self.summary_chart_scroll_frame = None
+        self._summary_chart_scroll_min_width = 0
+        self._summary_chart_retry = 0
+        self._summary_chart_height = None
+        self._summary_chart_manual = False
+        self._summary_chart_height_job = None
+        self._summary_chart_render_job = None
+        self._chart_resize_start_y = None
+        self._chart_resize_start_height = None
         self._cjk_font_ready = False
         self.shift_options = ["Day", "Night"]
         self.area_options = ["etching_D", "etching_E", "litho", "thin_film"]
@@ -132,6 +151,7 @@ class ModernMainFrame:
         self._show_login_screen()
         self.parent.after(0, self._notify_database_fallback)
         self.parent.protocol("WM_DELETE_WINDOW", self._on_app_close)
+        self.parent.bind("<Configure>", self._on_root_configure, add="+")
 
     def _t(self, key, default):
         return self.lang_manager.get_text(key, default)
@@ -188,6 +208,134 @@ class ModernMainFrame:
         data = self._load_settings_data()
         data["theme"] = self.theme_mode
         self._save_settings_data(data)
+
+    def _scale_font_size(self, size):
+        scaled = int(round(size * self._ui_scale))
+        return max(8, scaled)
+
+    def _font(self, size, weight=None, slant=None, *, family="Segoe UI"):
+        parts = [family, self._scale_font_size(size)]
+        if weight:
+            parts.append(weight)
+        if slant:
+            parts.append(slant)
+        return tuple(parts)
+
+    def _capture_base_named_fonts(self):
+        try:
+            import tkinter.font as tkfont
+        except Exception:
+            return
+        for name in (
+            "TkDefaultFont",
+            "TkTextFont",
+            "TkHeadingFont",
+            "TkMenuFont",
+            "TkFixedFont",
+            "TkCaptionFont",
+            "TkSmallCaptionFont",
+            "TkIconFont",
+            "TkTooltipFont",
+        ):
+            try:
+                font = tkfont.nametofont(name)
+                self._base_named_fonts[name] = font.cget("size")
+            except tk.TclError:
+                continue
+
+    def _apply_named_font_scaling(self):
+        if not self._base_named_fonts:
+            self._capture_base_named_fonts()
+        if not self._base_named_fonts:
+            return
+        try:
+            import tkinter.font as tkfont
+        except Exception:
+            return
+        for name, base in self._base_named_fonts.items():
+            try:
+                sign = -1 if base < 0 else 1
+                base_abs = abs(int(base))
+                scaled = max(6, int(round(base_abs * self._ui_scale)))
+                tkfont.nametofont(name).configure(size=sign * scaled)
+            except tk.TclError:
+                continue
+
+    def _clamp_ui_scale(self, value):
+        return max(self._ui_scale_min, min(self._ui_scale_max, value))
+
+    def _calculate_auto_ui_scale(self):
+        screen_width = self.parent.winfo_screenwidth() or 1920
+        screen_height = self.parent.winfo_screenheight() or 1080
+        scale = min(screen_width / 1920, screen_height / 1080)
+        return self._clamp_ui_scale(scale)
+
+    def _set_tk_scaling(self, scale):
+        try:
+            self.parent.tk.call("tk", "scaling", scale)
+        except tk.TclError:
+            pass
+
+    def _persist_ui_scale_settings(self):
+        data = self._load_settings_data()
+        data["ui_scale"] = round(self._ui_scale, 2)
+        data["auto_ui_scale"] = bool(self._auto_ui_scale)
+        self._save_settings_data(data)
+
+    def _init_ui_scale_settings(self):
+        data = self._load_settings_data()
+        self._auto_ui_scale = bool(data.get("auto_ui_scale", True))
+        saved_scale = data.get("ui_scale")
+        if isinstance(saved_scale, (int, float)):
+            self._ui_scale = float(saved_scale)
+        if self._auto_ui_scale:
+            self._ui_scale = self._calculate_auto_ui_scale()
+        else:
+            self._ui_scale = self._clamp_ui_scale(self._ui_scale)
+        self._set_tk_scaling(self._ui_scale)
+        self._apply_named_font_scaling()
+
+    def _update_ui_scale_controls(self):
+        if not hasattr(self, "ui_scale_value_label"):
+            return
+        percent = int(round(self._ui_scale * 100))
+        self.ui_scale_value_label.configure(text=f"{percent}%")
+        state = "disabled" if self._auto_ui_scale else "normal"
+        if hasattr(self, "ui_scale_down_btn"):
+            self.ui_scale_down_btn.configure(state=state)
+        if hasattr(self, "ui_scale_up_btn"):
+            self.ui_scale_up_btn.configure(state=state)
+        if hasattr(self, "auto_ui_scale_var"):
+            if self.auto_ui_scale_var.get() != self._auto_ui_scale:
+                self.auto_ui_scale_var.set(self._auto_ui_scale)
+
+    def _apply_ui_scale(self, persist=True):
+        if self._auto_ui_scale:
+            self._ui_scale = self._calculate_auto_ui_scale()
+        else:
+            self._ui_scale = self._clamp_ui_scale(self._ui_scale)
+        self._set_tk_scaling(self._ui_scale)
+        self._apply_named_font_scaling()
+        if persist:
+            self._persist_ui_scale_settings()
+        self.setup_modern_styles()
+        self._apply_theme_to_fixed_widgets()
+        if hasattr(self, "attendance_section") and self.attendance_section:
+            self.attendance_section.apply_theme()
+        if self.summary_dashboard_data is not None:
+            self._render_summary_charts(self.summary_dashboard_data)
+        self._update_ui_scale_controls()
+
+    def _adjust_ui_scale(self, delta):
+        self._auto_ui_scale = False
+        self._ui_scale = self._clamp_ui_scale(self._ui_scale + delta)
+        self._apply_ui_scale()
+
+    def _on_auto_ui_scale_toggle(self):
+        if not hasattr(self, "auto_ui_scale_var"):
+            return
+        self._auto_ui_scale = bool(self.auto_ui_scale_var.get())
+        self._apply_ui_scale()
 
     def _register_text_widget(self, widget):
         self._text_widgets.append(widget)
@@ -330,7 +478,7 @@ class ModernMainFrame:
             background=colors["surface"],
             foreground=colors["text_primary"],
             padding=(10, 6),
-            font=("Segoe UI", 9),
+            font=self._font(9),
         )
         style.map(
             "TButton",
@@ -385,20 +533,20 @@ class ModernMainFrame:
             "TLabelframe.Label",
             background=colors["surface"],
             foreground=colors["text_primary"],
-            font=("Segoe UI", 10, "bold"),
+            font=self._font(10, "bold"),
         )
         style.configure(
             "Treeview",
             background=colors["surface"],
             fieldbackground=colors["surface"],
             foreground=colors["text_primary"],
-            rowheight=24,
+            rowheight=max(18, int(round(24 * self._ui_scale))),
         )
         style.configure(
             "Treeview.Heading",
             background=colors["background"],
             foreground=colors["text_primary"],
-            font=("Segoe UI", 9, "bold"),
+            font=self._font(9, "bold"),
         )
         style.map(
             "Treeview",
@@ -425,7 +573,7 @@ class ModernMainFrame:
             background=colors["primary"],
             foreground="white",
             padding=(15, 8),
-            font=("Segoe UI", 10, "bold"),
+            font=self._font(10, "bold"),
         )
 
         style.configure(
@@ -433,7 +581,7 @@ class ModernMainFrame:
             background=colors["accent"],
             foreground="white",
             padding=(10, 6),
-            font=("Segoe UI", 9, "bold"),
+            font=self._font(9, "bold"),
         )
 
         style.configure(
@@ -441,7 +589,7 @@ class ModernMainFrame:
             background=colors["sidebar"],
             foreground="white",
             padding=(15, 12),
-            font=("Segoe UI", 10),
+            font=self._font(10),
             anchor="w",
         )
 
@@ -450,7 +598,7 @@ class ModernMainFrame:
             background=colors["sidebar_active"],
             foreground="white",
             padding=(15, 12),
-            font=("Segoe UI", 10, "bold"),
+            font=self._font(10, "bold"),
             anchor="w",
         )
 
@@ -459,7 +607,7 @@ class ModernMainFrame:
             background=colors["surface"],
             foreground=colors["text_primary"],
             padding=(10, 6),
-            font=("Segoe UI", 9, "bold"),
+            font=self._font(9, "bold"),
         )
         style.map(
             "Toolbar.TButton",
@@ -482,35 +630,35 @@ class ModernMainFrame:
         # 標籤樣式
         style.configure(
             "Title.TLabel",
-            font=("Segoe UI", 24, "bold"),
+            font=self._font(24, "bold"),
             foreground=colors["text_primary"],
             background=colors["background"],
         )
 
         style.configure(
             "Subtitle.TLabel",
-            font=("Segoe UI", 14),
+            font=self._font(14),
             foreground=colors["text_secondary"],
             background=colors["background"],
         )
 
         style.configure(
             "Context.TLabel",
-            font=("Segoe UI", 10, "bold"),
+            font=self._font(10, "bold"),
             foreground=colors["text_secondary"],
             background=colors["background"],
         )
 
         style.configure(
             "CardTitle.TLabel",
-            font=("Segoe UI", 12, "bold"),
+            font=self._font(12, "bold"),
             foreground=colors["text_primary"],
             background=colors["surface"],
         )
 
         style.configure(
             "Sidebar.TLabel",
-            font=("Segoe UI", 11),
+            font=self._font(11),
             foreground="white",
             background=colors["sidebar"],
         )
@@ -519,7 +667,7 @@ class ModernMainFrame:
         style.configure("Modern.TNotebook", background=colors["background"])
         style.configure(
             "Modern.TNotebook.Tab",
-            font=("Segoe UI", 10),
+            font=self._font(10),
             padding=(15, 8),
             background=colors["surface"],
         )
@@ -534,7 +682,7 @@ class ModernMainFrame:
             "Modern.TEntry",
             fieldbackground=colors["surface"],
             foreground=colors["text_primary"],
-            font=("Segoe UI", 10),
+            font=self._font(10),
             bordercolor=colors["divider"],
             lightcolor=colors["divider"],
             darkcolor=colors["divider"],
@@ -558,7 +706,7 @@ class ModernMainFrame:
             "Horizontal.TProgressbar",
             background=colors["primary"],
             troughcolor=colors["background"],
-            thickness=8,
+            thickness=max(6, int(round(8 * self._ui_scale))),
         )
 
         # 分隔線樣式
@@ -588,7 +736,7 @@ class ModernMainFrame:
             row=1, column=0, columnspan=2, sticky="w", padx=30, pady=(0, 20)
         )
 
-        username_label = ttk.Label(card, font=("Segoe UI", 10))
+        username_label = ttk.Label(card, font=self._font(10))
         self._register_text(
             username_label, "common.username", "使用者名稱", scope="global"
         )
@@ -601,7 +749,7 @@ class ModernMainFrame:
             row=2, column=1, sticky="ew", padx=(10, 30), pady=(0, 10)
         )
 
-        password_label = ttk.Label(card, font=("Segoe UI", 10))
+        password_label = ttk.Label(card, font=self._font(10))
         self._register_text(password_label, "common.password", "密碼", scope="global")
         password_label.grid(row=3, column=0, sticky="w", padx=30, pady=(0, 10))
         self.login_password_var = tk.StringVar()
@@ -683,7 +831,7 @@ class ModernMainFrame:
         # 主標題
         self.main_title = ttk.Label(
             title_container,
-            font=("Segoe UI", 18, "bold"),
+            font=self._font(18, "bold"),
             foreground=self.COLORS["primary"],
             background=self.COLORS["surface"],
         )
@@ -693,7 +841,7 @@ class ModernMainFrame:
         # 副標題
         self.subtitle = ttk.Label(
             title_container,
-            font=("Segoe UI", 9),
+            font=self._font(9),
             foreground=self.COLORS["text_secondary"],
             background=self.COLORS["surface"],
         )
@@ -709,7 +857,7 @@ class ModernMainFrame:
         # 使用者資訊
         self.user_info_label = ttk.Label(
             tool_container,
-            font=("Segoe UI", 10),
+            font=self._font(10),
             foreground=self.COLORS["text_secondary"],
             background=self.COLORS["surface"],
         )
@@ -720,6 +868,24 @@ class ModernMainFrame:
             tool_container, self.lang_manager, callback=self.on_language_changed
         )
         self.lang_selector.get_widget().pack(side="left", padx=(0, 10))
+
+        self.font_scale_down_btn = ttk.Button(
+            tool_container,
+            style="Toolbar.TButton",
+            text="-A",
+            width=3,
+            command=lambda: self._adjust_ui_scale(-self._ui_scale_step),
+        )
+        self.font_scale_down_btn.pack(side="left", padx=(0, 6))
+
+        self.font_scale_up_btn = ttk.Button(
+            tool_container,
+            style="Toolbar.TButton",
+            text="+A",
+            width=3,
+            command=lambda: self._adjust_ui_scale(self._ui_scale_step),
+        )
+        self.font_scale_up_btn.pack(side="left", padx=(0, 10))
 
         # 主題切換
         self.theme_toggle_btn = ttk.Button(
@@ -747,7 +913,7 @@ class ModernMainFrame:
         # 側邊欄標題
         self.sidebar_title = ttk.Label(
             self.sidebar_frame,
-            font=("Segoe UI", 12, "bold"),
+            font=self._font(12, "bold"),
             foreground="white",
             background=self.COLORS["sidebar"],
         )
@@ -792,7 +958,7 @@ class ModernMainFrame:
 
         self.sidebar_version_label = ttk.Label(
             self.sidebar_frame,
-            font=("Segoe UI", 8),
+            font=self._font(8),
             foreground="white",
             background=self.COLORS["sidebar"],
         )
@@ -892,7 +1058,7 @@ class ModernMainFrame:
 
         self.status_label = ttk.Label(
             self.status_frame,
-            font=("Segoe UI", 9),
+            font=self._font(9),
             foreground=self.COLORS["text_secondary"],
             background=self.COLORS["surface"],
         )
@@ -901,7 +1067,7 @@ class ModernMainFrame:
 
         self.status_info_label = ttk.Label(
             self.status_frame,
-            font=("Segoe UI", 9),
+            font=self._font(9),
             foreground=self.COLORS["text_secondary"],
             background=self.COLORS["surface"],
         )
@@ -1093,7 +1259,7 @@ class ModernMainFrame:
         )
 
         # 日期
-        date_label = ttk.Label(form_frame, font=("Segoe UI", 10))
+        date_label = ttk.Label(form_frame, font=self._font(10))
         self._register_text(date_label, "fields.date", "📅 日期:", scope="page")
         date_label.grid(
             row=0, column=0, sticky="w", padx=0, pady=self.layout["row_pad"]
@@ -1178,7 +1344,7 @@ class ModernMainFrame:
         self.key_output_text = tk.Text(
             basic_card,
             height=4,
-            font=("Segoe UI", 10),
+            font=self._font(10),
             bg=self.COLORS["surface"],
             wrap="word",
         )
@@ -1194,7 +1360,7 @@ class ModernMainFrame:
         self.key_issues_text = tk.Text(
             basic_card,
             height=4,
-            font=("Segoe UI", 10),
+            font=self._font(10),
             bg=self.COLORS["surface"],
             wrap="word",
         )
@@ -1213,7 +1379,7 @@ class ModernMainFrame:
         self.countermeasures_text = tk.Text(
             basic_card,
             height=4,
-            font=("Segoe UI", 10),
+            font=self._font(10),
             bg=self.COLORS["surface"],
             wrap="word",
         )
@@ -1268,6 +1434,13 @@ class ModernMainFrame:
         frame.bind_all("<MouseWheel>", _on_mousewheel)
         frame.bind_all("<Button-4>", _on_mousewheel_linux)
         frame.bind_all("<Button-5>", _on_mousewheel_linux)
+
+    def _on_root_configure(self, event):
+        if self.current_page != "summary":
+            return
+        if self._summary_chart_manual:
+            return
+        self._schedule_summary_chart_height_sync()
 
     def _daily_scroll_setup(self, parent):
         self.daily_scroll_canvas = tk.Canvas(parent, highlightthickness=0, bd=0)
@@ -1426,7 +1599,7 @@ class ModernMainFrame:
                 widget_type="combo",
                 values=kwargs["values"],
                 width=28,
-                label_font=("Segoe UI", 10),
+                label_font=self._font(10),
                 field_padx=self.layout["field_gap"],
                 field_pady=self.layout["row_pad"],
             )
@@ -1438,7 +1611,7 @@ class ModernMainFrame:
                 variable=var,
                 widget_type="entry",
                 width=30,
-                label_font=("Segoe UI", 10),
+                label_font=self._font(10),
                 entry_style="Modern.TEntry",
                 field_padx=self.layout["field_gap"],
                 field_pady=self.layout["row_pad"],
@@ -1610,7 +1783,7 @@ class ModernMainFrame:
         form_frame.columnconfigure(3, weight=1)
 
         # 設備號碼
-        equip_id_label = ttk.Label(form_frame, font=("Segoe UI", 10))
+        equip_id_label = ttk.Label(form_frame, font=self._font(10))
         self._register_text(
             equip_id_label, "equipment.equipId", "設備號碼:", scope="page"
         )
@@ -1627,7 +1800,7 @@ class ModernMainFrame:
         )
 
         # 發生時刻
-        start_time_label = ttk.Label(form_frame, font=("Segoe UI", 10))
+        start_time_label = ttk.Label(form_frame, font=self._font(10))
         self._register_text(
             start_time_label, "equipment.startTime", "發生時刻:", scope="page"
         )
@@ -1644,7 +1817,7 @@ class ModernMainFrame:
         )
 
         # 影響數量
-        impact_label = ttk.Label(form_frame, font=("Segoe UI", 10))
+        impact_label = ttk.Label(form_frame, font=self._font(10))
         self._register_text(
             impact_label, "equipment.impactQty", "影響數量:", scope="page"
         )
@@ -1660,7 +1833,7 @@ class ModernMainFrame:
             pady=self.layout["row_pad"],
         )
 
-        impact_hours_label = ttk.Label(form_frame, font=("Segoe UI", 10))
+        impact_hours_label = ttk.Label(form_frame, font=self._font(10))
         self._register_text(
             impact_hours_label, "equipment.impactHours", "Impact Hours:", scope="page"
         )
@@ -1679,13 +1852,13 @@ class ModernMainFrame:
         )
 
         # 異常內容
-        desc_label = ttk.Label(form_frame, font=("Segoe UI", 10))
+        desc_label = ttk.Label(form_frame, font=self._font(10))
         self._register_text(desc_label, "common.description", "異常內容:", scope="page")
         desc_label.grid(row=2, column=0, sticky="w", pady=self.layout["row_pad"])
         self.equip_desc_text = tk.Text(
             form_frame,
             height=4,
-            font=("Segoe UI", 10),
+            font=self._font(10),
             bg=self.COLORS["surface"],
             wrap="word",
         )
@@ -1700,7 +1873,7 @@ class ModernMainFrame:
         )
 
         # 對應內容
-        action_label = ttk.Label(form_frame, font=("Segoe UI", 10))
+        action_label = ttk.Label(form_frame, font=self._font(10))
         self._register_text(
             action_label, "equipment.actionTaken", "對應內容:", scope="page"
         )
@@ -1708,7 +1881,7 @@ class ModernMainFrame:
         self.action_text = tk.Text(
             form_frame,
             height=4,
-            font=("Segoe UI", 10),
+            font=self._font(10),
             bg=self.COLORS["surface"],
             wrap="word",
         )
@@ -1734,7 +1907,7 @@ class ModernMainFrame:
         )
         image_frame.columnconfigure(1, weight=1)
 
-        image_label = ttk.Label(image_frame, font=("Segoe UI", 10))
+        image_label = ttk.Label(image_frame, font=self._font(10))
         self._register_text(image_label, "common.image", "異常圖片:", scope="page")
         image_label.pack(side="left")
         self.image_path_var = tk.StringVar()
@@ -1797,7 +1970,7 @@ class ModernMainFrame:
         form_frame.columnconfigure(3, weight=1)
 
         # 批號
-        lot_id_label = ttk.Label(form_frame, font=("Segoe UI", 10))
+        lot_id_label = ttk.Label(form_frame, font=self._font(10))
         self._register_text(lot_id_label, "lot.lotId", "批號:", scope="page")
         lot_id_label.grid(row=0, column=0, sticky="w", pady=self.layout["row_pad"])
         self.lot_id_var = tk.StringVar()
@@ -1810,7 +1983,7 @@ class ModernMainFrame:
         )
 
         # 異常內容
-        lot_desc_label = ttk.Label(form_frame, font=("Segoe UI", 10))
+        lot_desc_label = ttk.Label(form_frame, font=self._font(10))
         self._register_text(
             lot_desc_label, "common.description", "異常內容:", scope="page"
         )
@@ -1818,7 +1991,7 @@ class ModernMainFrame:
         self.lot_desc_text = tk.Text(
             form_frame,
             height=4,
-            font=("Segoe UI", 10),
+            font=self._font(10),
             bg=self.COLORS["surface"],
             wrap="word",
         )
@@ -1833,7 +2006,7 @@ class ModernMainFrame:
         )
 
         # 處置狀況
-        status_label = ttk.Label(form_frame, font=("Segoe UI", 10))
+        status_label = ttk.Label(form_frame, font=self._font(10))
         self._register_text(status_label, "lot.status", "處置狀況:", scope="page")
         status_label.grid(row=2, column=0, sticky="w", pady=self.layout["row_pad"])
         self.lot_status_var = tk.StringVar()
@@ -1848,13 +2021,13 @@ class ModernMainFrame:
         )
 
         # 特記事項
-        notes_label = ttk.Label(form_frame, font=("Segoe UI", 10))
+        notes_label = ttk.Label(form_frame, font=self._font(10))
         self._register_text(notes_label, "lot.notes", "特記事項:", scope="page")
         notes_label.grid(row=3, column=0, sticky="w", pady=self.layout["row_pad"])
         self.lot_notes_text = tk.Text(
             form_frame,
             height=4,
-            font=("Segoe UI", 10),
+            font=self._font(10),
             bg=self.COLORS["surface"],
             wrap="word",
         )
@@ -1908,7 +2081,7 @@ class ModernMainFrame:
             fill="x", padx=self.layout["card_pad"], pady=self.layout["card_pad"]
         )
 
-        start_label = ttk.Label(control_frame, font=("Segoe UI", 10))
+        start_label = ttk.Label(control_frame, font=self._font(10))
         self._register_text(
             start_label, "summaryDashboard.startDate", "統計開始日期", scope="page"
         )
@@ -1924,7 +2097,7 @@ class ModernMainFrame:
         )
         self._create_date_picker(start_frame, self.summary_dash_start_var, width=14)
 
-        end_label = ttk.Label(control_frame, font=("Segoe UI", 10))
+        end_label = ttk.Label(control_frame, font=self._font(10))
         self._register_text(
             end_label, "summaryDashboard.endDate", "統計結束日期", scope="page"
         )
@@ -1952,7 +2125,7 @@ class ModernMainFrame:
 
         self.summary_hint_label = ttk.Label(
             control_frame,
-            font=("Segoe UI", 9),
+            font=self._font(9),
             foreground=self.COLORS["text_secondary"],
         )
         self._register_text(
@@ -2057,10 +2230,62 @@ class ModernMainFrame:
         self._register_text(update_btn, "summaryDashboard.update", "更新", scope="page")
         update_btn.pack(side="right")
 
+        resize_handle = ttk.Frame(self.summary_scroll_frame, height=8, style="Card.TFrame")
+        resize_handle.pack(fill="x", pady=(0, 10))
+        resize_handle.configure(cursor="sb_v_double_arrow")
+        resize_handle.bind("<ButtonPress-1>", self._start_summary_chart_resize)
+        resize_handle.bind("<B1-Motion>", self._drag_summary_chart_resize)
+        resize_handle.bind("<ButtonRelease-1>", self._end_summary_chart_resize)
+
+        charts_scroll_wrap = ttk.Frame(self.summary_scroll_frame, style="Card.TFrame")
+        charts_scroll_wrap.pack(fill="both", expand=True)
+
+        self.summary_chart_scroll_canvas = tk.Canvas(
+            charts_scroll_wrap,
+            background=self.COLORS["background"],
+            highlightthickness=0,
+        )
+        self._register_canvas_widget(self.summary_chart_scroll_canvas, "background")
+        self.summary_chart_scroll_canvas.pack(side="top", fill="both", expand=True)
+
+        chart_x_scroll = ttk.Scrollbar(
+            charts_scroll_wrap,
+            orient="horizontal",
+            command=self.summary_chart_scroll_canvas.xview,
+        )
+        chart_x_scroll.pack(side="bottom", fill="x")
+        self.summary_chart_scroll_canvas.configure(xscrollcommand=chart_x_scroll.set)
+
+        self.summary_chart_scroll_frame = ttk.Frame(
+            self.summary_chart_scroll_canvas, style="Modern.TFrame"
+        )
+        self.summary_chart_scroll_window = self.summary_chart_scroll_canvas.create_window(
+            (0, 0), window=self.summary_chart_scroll_frame, anchor="nw"
+        )
+
+        def _on_chart_frame_config(_event):
+            self.summary_chart_scroll_canvas.configure(
+                scrollregion=self.summary_chart_scroll_canvas.bbox("all")
+            )
+
+        def _on_chart_canvas_config(event):
+            target = max(
+                int(event.width), int(self._summary_chart_scroll_min_width or 0)
+            )
+            self.summary_chart_scroll_canvas.itemconfigure(
+                self.summary_chart_scroll_window, width=target
+            )
+
+        self.summary_chart_scroll_frame.bind("<Configure>", _on_chart_frame_config)
+        self.summary_chart_scroll_canvas.bind("<Configure>", _on_chart_canvas_config)
+
         charts_card = self.create_card(
-            self.summary_scroll_frame, "📊", "cards.attendanceCharts", "人員出勤率圖表"
+            self.summary_chart_scroll_frame, "📊", "cards.attendanceCharts", "人員出勤率圖表"
         )
         charts_card.pack(fill="both", expand=True)
+        charts_card.pack_propagate(False)
+        self.summary_charts_card = charts_card
+        self._summary_chart_manual = False
 
         charts_frame = ttk.Frame(charts_card, style="Card.TFrame")
         charts_frame.pack(
@@ -2071,6 +2296,7 @@ class ModernMainFrame:
         )
         charts_frame.columnconfigure(0, weight=1)
         charts_frame.columnconfigure(1, weight=1)
+        charts_frame.rowconfigure(0, weight=1)
 
         self.summary_pie_frame = ttk.Frame(charts_frame, style="Card.TFrame")
         self.summary_pie_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 10))
@@ -2081,6 +2307,7 @@ class ModernMainFrame:
         self.summary_bar_canvas = None
         self.summary_dashboard_data = None
         self._render_summary_charts(None)
+        self.parent.after(0, self._sync_summary_chart_height)
 
     def _build_attendance_notes(self, regular_reason, contract_reason):
         regular_label = self._t("attendance.regular_short", "Regular")
@@ -2718,7 +2945,7 @@ class ModernMainFrame:
                 "total_absent": total_absent,
                 "daily_series": daily_series,
             }
-            self._render_summary_charts(self.summary_dashboard_data)
+            self._schedule_summary_chart_render()
         except Exception as exc:
             self.summary_dashboard_data = None
             self._render_summary_charts(None)
@@ -2946,6 +3173,133 @@ class ModernMainFrame:
         self.summary_pie_canvas = None
         self.summary_bar_canvas = None
 
+    def _get_summary_chart_target_height(self):
+        window_height = self.parent.winfo_height()
+        if window_height <= 1:
+            window_height = self.parent.winfo_screenheight()
+        base_height = max(200, int(window_height / 3))
+        scale_extra = int(max(0, (self._ui_scale - 1.0) * 90))
+        return base_height + scale_extra
+
+    def _get_summary_chart_target_width(self, label_count, label_font):
+        label_count = max(1, int(label_count))
+        per_label = max(48, int(round(label_font * 4)))
+        per_chart = max(420, label_count * per_label)
+        return (per_chart * 2) + 40
+
+    def _apply_summary_chart_width(self, width):
+        if not getattr(self, "summary_chart_scroll_canvas", None):
+            return
+        try:
+            canvas_width = self.summary_chart_scroll_canvas.winfo_width()
+        except tk.TclError:
+            return
+        target = max(int(width), int(canvas_width))
+        self._summary_chart_scroll_min_width = target
+        try:
+            self.summary_chart_scroll_canvas.itemconfigure(
+                self.summary_chart_scroll_window, width=target
+            )
+        except tk.TclError:
+            return
+        self.summary_chart_scroll_canvas.configure(
+            scrollregion=self.summary_chart_scroll_canvas.bbox("all")
+        )
+
+    def _apply_summary_chart_height(self, height, *, replot=True):
+        if not hasattr(self, "summary_charts_card") or not self.summary_charts_card:
+            return
+        height = max(200, int(height))
+        if self._summary_chart_height is not None:
+            if abs(self._summary_chart_height - height) < 2:
+                return
+        self.summary_charts_card.configure(height=height)
+        self.summary_charts_card.pack_propagate(False)
+        if getattr(self, "summary_chart_scroll_canvas", None):
+            self.summary_chart_scroll_canvas.configure(height=height)
+        self._summary_chart_height = height
+        if replot:
+            self._schedule_summary_chart_render()
+
+    def _sync_summary_chart_height(self):
+        if self._summary_chart_manual:
+            return
+        target = self._get_summary_chart_target_height()
+        self._apply_summary_chart_height(target)
+
+    def _schedule_summary_chart_height_sync(self):
+        if self._summary_chart_height_job:
+            self.parent.after_cancel(self._summary_chart_height_job)
+        self._summary_chart_height_job = self.parent.after(
+            120, self._sync_summary_chart_height
+        )
+
+    def _schedule_summary_chart_render(self):
+        if self._summary_chart_render_job:
+            self.parent.after_cancel(self._summary_chart_render_job)
+        self._summary_chart_retry = 0
+        self._summary_chart_render_job = self.parent.after(
+            120, self._render_summary_charts_if_visible
+        )
+
+    def _summary_charts_ready(self):
+        if not getattr(self, "summary_pie_frame", None) or not getattr(
+            self, "summary_bar_frame", None
+        ):
+            return False
+        try:
+            sizes = (
+                self.summary_pie_frame.winfo_width(),
+                self.summary_pie_frame.winfo_height(),
+                self.summary_bar_frame.winfo_width(),
+                self.summary_bar_frame.winfo_height(),
+            )
+        except tk.TclError:
+            return False
+        return min(sizes) > 10
+
+    def _schedule_summary_chart_retry(self):
+        if self._summary_chart_retry >= 3:
+            return
+        self._summary_chart_retry += 1
+        self._summary_chart_render_job = self.parent.after(
+            160, self._render_summary_charts_if_visible
+        )
+
+    def _render_summary_charts_if_visible(self):
+        self._summary_chart_render_job = None
+        if self.current_page != "summary":
+            return
+        if not self._summary_charts_ready():
+            self._schedule_summary_chart_retry()
+            return
+        self._render_summary_charts(self.summary_dashboard_data)
+
+    def _start_summary_chart_resize(self, event):
+        if not hasattr(self, "summary_charts_card") or not self.summary_charts_card:
+            return
+        self._summary_chart_manual = True
+        self._chart_resize_start_y = event.y_root
+        self._chart_resize_start_height = self.summary_charts_card.winfo_height()
+
+    def _drag_summary_chart_resize(self, event):
+        if self._chart_resize_start_height is None:
+            return
+        delta = event.y_root - self._chart_resize_start_y
+        new_height = self._chart_resize_start_height + delta
+        max_height = int(self.parent.winfo_height() * 0.8)
+        if max_height <= 0:
+            max_height = int(self.parent.winfo_screenheight() * 0.8)
+        new_height = max(200, min(new_height, max_height))
+        self._apply_summary_chart_height(new_height, replot=False)
+
+    def _end_summary_chart_resize(self, event):
+        if self._chart_resize_start_height is None:
+            return
+        self._chart_resize_start_height = None
+        self._chart_resize_start_y = None
+        self._schedule_summary_chart_render()
+
     def _render_summary_charts(self, data):
         if not getattr(self, "summary_pie_frame", None) or not getattr(
             self, "summary_bar_frame", None
@@ -2956,31 +3310,66 @@ class ModernMainFrame:
             empty_text = self._t("common.emptyData", "查無資料")
             if hasattr(self, "summary_pie_frame"):
                 ttk.Label(
-                    self.summary_pie_frame, text=empty_text, font=("Segoe UI", 10)
+                    self.summary_pie_frame, text=empty_text, font=self._font(10)
                 ).pack(expand=True)
             if hasattr(self, "summary_bar_frame"):
                 ttk.Label(
-                    self.summary_bar_frame, text=empty_text, font=("Segoe UI", 10)
+                    self.summary_bar_frame, text=empty_text, font=self._font(10)
                 ).pack(expand=True)
+            if getattr(self, "summary_chart_scroll_canvas", None):
+                self._apply_summary_chart_width(
+                    self.summary_chart_scroll_canvas.winfo_width()
+                )
             return
 
         self._ensure_cjk_font()
         theme = self._get_chart_theme()
 
+        self.summary_pie_frame.update_idletasks()
+        self.summary_bar_frame.update_idletasks()
+        dpi = 100
+        pie_width = self.summary_pie_frame.winfo_width()
+        bar_width = self.summary_bar_frame.winfo_width()
+        if pie_width <= 1:
+            pie_width = int(self.parent.winfo_screenwidth() * 0.45)
+        if bar_width <= 1:
+            bar_width = int(self.parent.winfo_screenwidth() * 0.45)
+        chart_height = max(
+            self.summary_pie_frame.winfo_height(),
+            self.summary_bar_frame.winfo_height(),
+        )
+        if chart_height <= 1:
+            base_height = self._summary_chart_height or self._get_summary_chart_target_height()
+            chart_height = max(200, int(base_height - 120))
+        chart_height = max(200, chart_height)
+        title_font = max(10, int(round(10 * self._ui_scale)))
+        label_font = max(8, int(round(8 * self._ui_scale)))
+        bottom_margin = min(0.35, max(0.14, 0.14 + (0.05 * self._ui_scale)))
+
         daily_series = data.get("daily_series", [])
         labels = [item["date"].strftime("%Y-%m-%d") for item in daily_series]
         regular_values = [item["regular"] for item in daily_series]
         contract_values = [item["contract"] for item in daily_series]
+        label_count = max(1, len(labels))
+        target_width = self._get_summary_chart_target_width(label_count, label_font)
+        self._apply_summary_chart_width(target_width)
+        self.summary_pie_frame.update_idletasks()
+        self.summary_bar_frame.update_idletasks()
         rate_values = []
         for item in daily_series:
             total = item.get("present", 0) + item.get("absent", 0)
             rate_values.append((item.get("present", 0) / total * 100) if total else 0)
 
-        line_fig = Figure(figsize=(4.2, 3.2), dpi=100)
+        line_fig = Figure(
+            figsize=(max(4.2, pie_width / dpi), chart_height / dpi), dpi=dpi
+        )
         line_fig.patch.set_facecolor(theme["face"])
         line_ax = line_fig.add_subplot(111)
         self._apply_chart_axes_theme(line_ax, theme)
-        line_ax.set_title(self._t("summaryDashboard.rateLineTitle", "出勤率趨勢"))
+        line_ax.set_title(
+            self._t("summaryDashboard.rateLineTitle", "出勤率趨勢"),
+            fontsize=title_font,
+        )
         if labels:
             x = list(range(len(labels)))
             line_ax.plot(
@@ -2998,13 +3387,16 @@ class ModernMainFrame:
                     xytext=(0, 6),
                     ha="center",
                     color=theme["text"],
-                    fontsize=8,
+                    fontsize=label_font,
                 )
             line_ax.set_xticks(x)
-            line_ax.set_xticklabels(labels, rotation=45, ha="right")
-            line_ax.set_ylabel(self._t("summaryDashboard.rateAxis", "出勤率 (%)"))
+            line_ax.set_xticklabels(labels, rotation=45, ha="right", fontsize=label_font)
+            line_ax.set_ylabel(
+                self._t("summaryDashboard.rateAxis", "出勤率 (%)"), fontsize=label_font
+            )
+            line_ax.tick_params(axis="y", labelsize=label_font)
             line_ax.set_ylim(0, 100)
-            legend = line_ax.legend(loc="upper right")
+            legend = line_ax.legend(loc="upper right", fontsize=label_font)
             legend.get_frame().set_facecolor(theme["face"])
             legend.get_frame().set_edgecolor(theme["grid"])
             for text in legend.get_texts():
@@ -3018,7 +3410,7 @@ class ModernMainFrame:
                 va="center",
                 color=theme["text"],
             )
-        line_fig.tight_layout()
+        line_fig.tight_layout(rect=(0, bottom_margin, 1, 1))
         self.summary_pie_canvas = FigureCanvasTkAgg(
             line_fig, master=self.summary_pie_frame
         )
@@ -3026,11 +3418,16 @@ class ModernMainFrame:
         self.summary_pie_canvas.get_tk_widget().configure(background=theme["face"])
         self.summary_pie_canvas.get_tk_widget().pack(fill="both", expand=True)
 
-        bar_fig = Figure(figsize=(4.6, 3.2), dpi=100)
+        bar_fig = Figure(
+            figsize=(max(4.6, bar_width / dpi), chart_height / dpi), dpi=dpi
+        )
         bar_fig.patch.set_facecolor(theme["face"])
         bar_ax = bar_fig.add_subplot(111)
         self._apply_chart_axes_theme(bar_ax, theme)
-        bar_ax.set_title(self._t("summaryDashboard.countChartTitle", "出勤人數"))
+        bar_ax.set_title(
+            self._t("summaryDashboard.countChartTitle", "出勤人數"),
+            fontsize=title_font,
+        )
 
         if labels:
             x = list(range(len(labels)))
@@ -3056,7 +3453,7 @@ class ModernMainFrame:
                         ha="center",
                         va="center",
                         color=theme["text"],
-                        fontsize=8,
+                        fontsize=label_font,
                     )
                 if con:
                     bar_ax.text(
@@ -3066,12 +3463,15 @@ class ModernMainFrame:
                         ha="center",
                         va="center",
                         color=theme["text"],
-                        fontsize=8,
+                        fontsize=label_font,
                     )
             bar_ax.set_xticks(x)
-            bar_ax.set_xticklabels(labels, rotation=45, ha="right")
-            bar_ax.set_ylabel(self._t("summaryDashboard.countAxis", "出勤人數"))
-            legend = bar_ax.legend(loc="upper right")
+            bar_ax.set_xticklabels(labels, rotation=45, ha="right", fontsize=label_font)
+            bar_ax.set_ylabel(
+                self._t("summaryDashboard.countAxis", "出勤人數"), fontsize=label_font
+            )
+            bar_ax.tick_params(axis="y", labelsize=label_font)
+            legend = bar_ax.legend(loc="upper right", fontsize=label_font)
             legend.get_frame().set_facecolor(theme["face"])
             legend.get_frame().set_edgecolor(theme["grid"])
             for text in legend.get_texts():
@@ -3085,13 +3485,17 @@ class ModernMainFrame:
                 va="center",
                 color=theme["text"],
             )
-        bar_fig.tight_layout()
+        bar_fig.tight_layout(rect=(0, bottom_margin, 1, 1))
         self.summary_bar_canvas = FigureCanvasTkAgg(
             bar_fig, master=self.summary_bar_frame
         )
         self.summary_bar_canvas.draw()
         self.summary_bar_canvas.get_tk_widget().configure(background=theme["face"])
         self.summary_bar_canvas.get_tk_widget().pack(fill="both", expand=True)
+        if getattr(self, "summary_chart_scroll_canvas", None):
+            self.summary_chart_scroll_canvas.configure(
+                scrollregion=self.summary_chart_scroll_canvas.bbox("all")
+            )
 
     def create_delay_list_page(self):
         """創建延遲清單頁面"""
@@ -3115,7 +3519,7 @@ class ModernMainFrame:
             fill="x", padx=self.layout["card_pad"], pady=self.layout["card_pad"]
         )
 
-        start_label = ttk.Label(control_frame, font=("Segoe UI", 10))
+        start_label = ttk.Label(control_frame, font=self._font(10))
         self._register_text(start_label, "delay.startDate", "起日", scope="page")
         start_label.grid(row=0, column=0, sticky="w", pady=self.layout["row_pad"])
         self.delay_start_var = tk.StringVar()
@@ -3130,7 +3534,7 @@ class ModernMainFrame:
         )
         self._create_date_picker(start_frame, self.delay_start_var, width=14)
 
-        end_label = ttk.Label(control_frame, font=("Segoe UI", 10))
+        end_label = ttk.Label(control_frame, font=self._font(10))
         self._register_text(end_label, "delay.endDate", "迄日", scope="page")
         end_label.grid(
             row=0, column=2, sticky="w", padx=(20, 0), pady=self.layout["row_pad"]
@@ -3278,7 +3682,7 @@ class ModernMainFrame:
             fill="x", padx=self.layout["card_pad"], pady=self.layout["card_pad"]
         )
 
-        start_label = ttk.Label(control_frame, font=("Segoe UI", 10))
+        start_label = ttk.Label(control_frame, font=self._font(10))
         self._register_text(
             start_label, "summaryActual.startDate", "日期篩選起日", scope="page"
         )
@@ -3295,7 +3699,7 @@ class ModernMainFrame:
         )
         self._create_date_picker(summary_start_frame, self.summary_start_var, width=14)
 
-        end_label = ttk.Label(control_frame, font=("Segoe UI", 10))
+        end_label = ttk.Label(control_frame, font=self._font(10))
         self._register_text(
             end_label, "summaryActual.endDate", "日期篩選迄日", scope="page"
         )
@@ -3435,7 +3839,7 @@ class ModernMainFrame:
             fill="x", padx=self.layout["card_pad"], pady=self.layout["card_pad"]
         )
 
-        start_label = ttk.Label(control_frame, font=("Segoe UI", 10))
+        start_label = ttk.Label(control_frame, font=self._font(10))
         self._register_text(start_label, "summaryQuery.startDate", "起日", scope="page")
         start_label.grid(row=0, column=0, sticky="w", pady=self.layout["row_pad"])
         self.summary_query_start_var = tk.StringVar()
@@ -3451,7 +3855,7 @@ class ModernMainFrame:
             summary_start_frame, self.summary_query_start_var, width=14
         )
 
-        end_label = ttk.Label(control_frame, font=("Segoe UI", 10))
+        end_label = ttk.Label(control_frame, font=self._font(10))
         self._register_text(end_label, "summaryQuery.endDate", "迄日", scope="page")
         end_label.grid(
             row=0, column=2, sticky="w", padx=(20, 0), pady=self.layout["row_pad"]
@@ -3477,7 +3881,7 @@ class ModernMainFrame:
         self._register_text(search_btn, "common.search", "搜尋", scope="page")
         search_btn.grid(row=0, column=4, padx=(20, 0), pady=self.layout["row_pad"])
 
-        shift_label = ttk.Label(control_frame, font=("Segoe UI", 10))
+        shift_label = ttk.Label(control_frame, font=self._font(10))
         self._register_text(shift_label, "summaryQuery.shift", "班別", scope="page")
         shift_label.grid(row=1, column=0, sticky="w", pady=self.layout["row_pad"])
         self.summary_query_shift_var = tk.StringVar()
@@ -3495,7 +3899,7 @@ class ModernMainFrame:
             pady=self.layout["row_pad"],
         )
 
-        area_label = ttk.Label(control_frame, font=("Segoe UI", 10))
+        area_label = ttk.Label(control_frame, font=self._font(10))
         self._register_text(area_label, "summaryQuery.area", "區域", scope="page")
         area_label.grid(
             row=1, column=2, sticky="w", padx=(20, 0), pady=self.layout["row_pad"]
@@ -3622,7 +4026,7 @@ class ModernMainFrame:
             fill="x", padx=self.layout["card_pad"], pady=self.layout["card_pad"]
         )
 
-        start_label = ttk.Label(control_frame, font=("Segoe UI", 10))
+        start_label = ttk.Label(control_frame, font=self._font(10))
         self._register_text(
             start_label, "abnormalHistory.startDate", "統計開始日期", scope="page"
         )
@@ -3638,7 +4042,7 @@ class ModernMainFrame:
         )
         self._create_date_picker(start_frame, self.abnormal_start_var, width=14)
 
-        end_label = ttk.Label(control_frame, font=("Segoe UI", 10))
+        end_label = ttk.Label(control_frame, font=self._font(10))
         self._register_text(
             end_label, "abnormalHistory.endDate", "統計結束日期", scope="page"
         )
@@ -3662,7 +4066,7 @@ class ModernMainFrame:
         self._register_text(search_btn, "common.search", "搜尋", scope="page")
         search_btn.grid(row=0, column=4, padx=(20, 0), pady=self.layout["row_pad"])
 
-        shift_label = ttk.Label(control_frame, font=("Segoe UI", 10))
+        shift_label = ttk.Label(control_frame, font=self._font(10))
         self._register_text(shift_label, "fields.shift", "⏰ 班別:", scope="page")
         shift_label.grid(row=1, column=0, sticky="w", pady=self.layout["row_pad"])
         self.abnormal_shift_var = tk.StringVar()
@@ -3680,7 +4084,7 @@ class ModernMainFrame:
             pady=self.layout["row_pad"],
         )
 
-        area_label = ttk.Label(control_frame, font=("Segoe UI", 10))
+        area_label = ttk.Label(control_frame, font=self._font(10))
         self._register_text(area_label, "fields.area", "🏭 區域:", scope="page")
         area_label.grid(
             row=1, column=2, sticky="w", padx=(20, 0), pady=self.layout["row_pad"]
@@ -3880,7 +4284,7 @@ class ModernMainFrame:
         db_card = self.create_card(parent, "🗄️", "cards.databaseSettings", "資料庫設定")
         db_card.pack(fill="x", padx=20, pady=(20, 10))
 
-        db_path_label = ttk.Label(db_card, font=("Segoe UI", 10))
+        db_path_label = ttk.Label(db_card, font=self._font(10))
         self._register_text(
             db_path_label, "settings.databasePath", "資料庫路徑:", scope="page"
         )
@@ -3906,6 +4310,45 @@ class ModernMainFrame:
         system_card = self.create_card(parent, "⚙️", "cards.systemSettings", "系統設定")
         system_card.pack(fill="x", padx=20, pady=(0, 20))
 
+        font_frame = ttk.Frame(system_card, style="Card.TFrame")
+        font_frame.pack(fill="x", padx=20, pady=(15, 0))
+
+        font_label = ttk.Label(font_frame, font=self._font(10))
+        self._register_text(font_label, "settings.fontSize", "字體大小", scope="page")
+        font_label.pack(side="left")
+
+        self.ui_scale_value_label = ttk.Label(
+        font_frame, font=self._font(10, "bold")
+        )
+        self.ui_scale_value_label.pack(side="left", padx=(10, 10))
+
+        self.ui_scale_down_btn = ttk.Button(
+            font_frame,
+            text="-",
+            width=3,
+            command=lambda: self._adjust_ui_scale(-self._ui_scale_step),
+        )
+        self.ui_scale_down_btn.pack(side="left")
+
+        self.ui_scale_up_btn = ttk.Button(
+            font_frame,
+            text="+",
+            width=3,
+            command=lambda: self._adjust_ui_scale(self._ui_scale_step),
+        )
+        self.ui_scale_up_btn.pack(side="left", padx=(6, 0))
+
+        self.auto_ui_scale_var = tk.BooleanVar(value=self._auto_ui_scale)
+        auto_scale_cb = ttk.Checkbutton(
+            font_frame,
+            variable=self.auto_ui_scale_var,
+            command=self._on_auto_ui_scale_toggle,
+        )
+        self._register_text(
+            auto_scale_cb, "settings.autoScale", "依解析度自動調整", scope="page"
+        )
+        auto_scale_cb.pack(side="left", padx=(12, 0))
+
         # 自動備份
         backup_frame = ttk.Frame(system_card, style="Card.TFrame")
         backup_frame.pack(fill="x", padx=20, pady=15)
@@ -3917,7 +4360,7 @@ class ModernMainFrame:
         )
         auto_backup_cb.pack(side="left")
 
-        interval_label = ttk.Label(backup_frame, font=("Segoe UI", 10))
+        interval_label = ttk.Label(backup_frame, font=self._font(10))
         self._register_text(
             interval_label, "settings.backupInterval", "備份間隔:", scope="page"
         )
@@ -3929,7 +4372,7 @@ class ModernMainFrame:
             width=5,
             style="Modern.TEntry",
         ).pack(side="left")
-        days_label = ttk.Label(backup_frame, font=("Segoe UI", 10))
+        days_label = ttk.Label(backup_frame, font=self._font(10))
         self._register_text(days_label, "settings.days", "天", scope="page")
         days_label.pack(side="left", padx=(5, 10))
 
@@ -3940,6 +4383,7 @@ class ModernMainFrame:
         save_btn.pack(side="left")
 
         self._load_system_settings()
+        self._update_ui_scale_controls()
 
     def _settings_path(self):
         return str(get_settings_path())
@@ -3961,6 +4405,13 @@ class ModernMainFrame:
     def _load_system_settings(self):
         data = self._load_settings_data()
         self.db_path_var.set(self._get_display_database_path())
+        if "auto_ui_scale" in data:
+            self._auto_ui_scale = bool(data["auto_ui_scale"])
+        if "ui_scale" in data:
+            try:
+                self._ui_scale = float(data["ui_scale"])
+            except (TypeError, ValueError):
+                pass
         if "auto_backup" in data:
             self.auto_backup_var.set(bool(data["auto_backup"]))
         if "backup_interval_days" in data:

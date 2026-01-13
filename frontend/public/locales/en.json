@@ -308,7 +308,9 @@
     "databaseInitBody": "The selected database does not exist. Copy data from the current database? Selecting No will create a blank database.",
     "databaseInitCopyFailed": "Failed to copy the current database: {error}",
     "databaseInitCreateFailed": "Failed to create a blank database: {error}",
-    "saveFailed": "Failed to save settings: {error}"
+    "saveFailed": "Failed to save settings: {error}",
+    "fontSize": "Font Size",
+    "autoScale": "Auto scale by resolution"
   },
   "stats": {
     "dailyReports": "Reports Today",

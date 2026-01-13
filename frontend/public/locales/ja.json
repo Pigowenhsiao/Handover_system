@@ -308,7 +308,9 @@
     "databaseInitBody": "選択したデータベースが存在しません。現在のデータベースからコピーしますか？「いいえ」を選ぶと空のデータベースを作成します。",
     "databaseInitCopyFailed": "現在のデータベースをコピーできませんでした：{error}",
     "databaseInitCreateFailed": "空のデータベースを作成できませんでした：{error}",
-    "saveFailed": "設定の保存に失敗しました：{error}"
+    "saveFailed": "設定の保存に失敗しました：{error}",
+    "fontSize": "?????",
+    "autoScale": "????????"
   },
   "stats": {
     "dailyReports": "本日のレポート",
