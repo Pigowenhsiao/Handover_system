@@ -2071,6 +2071,10 @@ class ModernMainFrame:
         )
 
         self._summary_scroll_setup()
+        self._summary_chart_height = None
+        self._summary_chart_manual = False
+        self._summary_chart_scroll_min_width = 0
+        self._summary_chart_retry = 0
         control_card = self.create_card(
             self.summary_scroll_frame, "👥", "cards.attendanceSummary", "人員出勤率"
         )
