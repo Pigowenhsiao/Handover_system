@@ -191,6 +191,11 @@ def create_treeview_with_scrollbars(
 
     def configure_tree() -> None:
         """Configure headers and columns - can be called on language change"""
+        try:
+            if not tree.winfo_exists():
+                return
+        except tk.TclError:
+            return
         if translate:
             for col, (key, default) in zip(columns, header_keys):
                 tree.heading(col, text=translate(key, default))

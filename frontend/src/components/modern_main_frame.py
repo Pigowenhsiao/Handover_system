@@ -2716,6 +2716,7 @@ class ModernMainFrame:
             "出勤率圖表",
         )
         attendance_chart_card.pack(fill="both", expand=True, pady=(0, 20))
+        self._apply_query_chart_card_height(attendance_chart_card)
         attendance_chart_frame = ttk.Frame(attendance_chart_card, style="Card.TFrame")
         attendance_chart_frame.pack(
             fill="both",
@@ -2767,6 +2768,7 @@ class ModernMainFrame:
             "加班人數圖表",
         )
         overtime_chart_card.pack(fill="both", expand=True)
+        self._apply_query_chart_card_height(overtime_chart_card)
         overtime_chart_frame = ttk.Frame(overtime_chart_card, style="Card.TFrame")
         overtime_chart_frame.pack(
             fill="both",
@@ -2841,6 +2843,7 @@ class ModernMainFrame:
             "機台異常趨勢",
         )
         equipment_chart_card.pack(fill="both", expand=True)
+        self._apply_query_chart_card_height(equipment_chart_card)
         equipment_chart_frame = ttk.Frame(equipment_chart_card, style="Card.TFrame")
         equipment_chart_frame.pack(
             fill="both",
@@ -2901,6 +2904,7 @@ class ModernMainFrame:
             "異常 Lot 趨勢",
         )
         lot_chart_card.pack(fill="both", expand=True)
+        self._apply_query_chart_card_height(lot_chart_card)
         lot_chart_frame = ttk.Frame(lot_chart_card, style="Card.TFrame")
         lot_chart_frame.pack(
             fill="both",
@@ -3277,6 +3281,23 @@ class ModernMainFrame:
                 ),
             )
 
+    def _get_query_chart_target_height(self):
+        try:
+            screen_height = self.parent.winfo_screenheight()
+        except tk.TclError:
+            screen_height = 900
+        return max(240, int(screen_height / 3))
+
+    def _apply_query_chart_card_height(self, card):
+        if not card:
+            return
+        height = self._get_query_chart_target_height()
+        try:
+            card.configure(height=height)
+        except tk.TclError:
+            return
+        card.pack_propagate(False)
+
     def _render_query_attendance_chart(self, data):
         frame = getattr(self, "query_attendance_chart_frame", None)
         if not frame or not frame.winfo_exists():
@@ -3297,7 +3318,11 @@ class ModernMainFrame:
         theme = self._get_chart_theme()
         frame.update_idletasks()
         width = frame.winfo_width() or int(self.parent.winfo_screenwidth() * 0.7)
-        height = frame.winfo_height() or 320
+        target_height = self._get_query_chart_target_height()
+        height = frame.winfo_height()
+        if height <= 1:
+            height = target_height
+        height = max(target_height, height)
         dpi = 100
         fig = Figure(figsize=(max(5.2, width / dpi), height / dpi), dpi=dpi)
         fig.patch.set_facecolor(theme["face"])
@@ -3328,7 +3353,9 @@ class ModernMainFrame:
         legend.get_frame().set_edgecolor(theme["grid"])
         for text in legend.get_texts():
             text.set_color(theme["text"])
-        fig.tight_layout(rect=(0, 0.18, 1, 1))
+        bottom_margin = 0.25 + max(0.0, (self._ui_scale - 1.0) * 0.05)
+        bottom_margin = min(0.4, bottom_margin)
+        fig.subplots_adjust(left=0.08, right=0.98, bottom=bottom_margin, top=0.9)
         canvas = FigureCanvasTkAgg(fig, master=frame)
         canvas.draw()
         canvas.get_tk_widget().configure(background=theme["face"])
@@ -3355,7 +3382,11 @@ class ModernMainFrame:
         theme = self._get_chart_theme()
         frame.update_idletasks()
         width = frame.winfo_width() or int(self.parent.winfo_screenwidth() * 0.7)
-        height = frame.winfo_height() or 320
+        target_height = self._get_query_chart_target_height()
+        height = frame.winfo_height()
+        if height <= 1:
+            height = target_height
+        height = max(target_height, height)
         dpi = 100
         fig = Figure(figsize=(max(5.2, width / dpi), height / dpi), dpi=dpi)
         fig.patch.set_facecolor(theme["face"])
@@ -3392,7 +3423,9 @@ class ModernMainFrame:
         legend.get_frame().set_edgecolor(theme["grid"])
         for text in legend.get_texts():
             text.set_color(theme["text"])
-        fig.tight_layout(rect=(0, 0.18, 1, 1))
+        bottom_margin = 0.25 + max(0.0, (self._ui_scale - 1.0) * 0.05)
+        bottom_margin = min(0.4, bottom_margin)
+        fig.subplots_adjust(left=0.08, right=0.98, bottom=bottom_margin, top=0.9)
         canvas = FigureCanvasTkAgg(fig, master=frame)
         canvas.draw()
         canvas.get_tk_widget().configure(background=theme["face"])
@@ -3418,7 +3451,11 @@ class ModernMainFrame:
         theme = self._get_chart_theme()
         frame.update_idletasks()
         width = frame.winfo_width() or int(self.parent.winfo_screenwidth() * 0.7)
-        height = frame.winfo_height() or 320
+        target_height = self._get_query_chart_target_height()
+        height = frame.winfo_height()
+        if height <= 1:
+            height = target_height
+        height = max(target_height, height)
         dpi = 100
         fig = Figure(figsize=(max(5.2, width / dpi), height / dpi), dpi=dpi)
         fig.patch.set_facecolor(theme["face"])
@@ -3461,7 +3498,9 @@ class ModernMainFrame:
         legend.get_frame().set_edgecolor(theme["grid"])
         for text in legend.get_texts():
             text.set_color(theme["text"])
-        fig.tight_layout(rect=(0, 0.18, 1, 1))
+        bottom_margin = 0.25 + max(0.0, (self._ui_scale - 1.0) * 0.05)
+        bottom_margin = min(0.4, bottom_margin)
+        fig.subplots_adjust(left=0.08, right=0.98, bottom=bottom_margin, top=0.9)
         canvas = FigureCanvasTkAgg(fig, master=frame)
         canvas.draw()
         canvas.get_tk_widget().configure(background=theme["face"])
