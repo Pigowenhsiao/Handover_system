@@ -334,8 +334,8 @@
     "databaseInitCopyFailed": "現在のデータベースをコピーできませんでした：{error}",
     "databaseInitCreateFailed": "空のデータベースを作成できませんでした：{error}",
     "saveFailed": "設定の保存に失敗しました：{error}",
-    "fontSize": "?????",
-    "autoScale": "????????????"
+    "fontSize": "文字サイズ",
+    "autoScale": "解像度に合わせて自動調整"
   },
   "stats": {
     "dailyReports": "本日のレポート",

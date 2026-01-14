@@ -2,7 +2,7 @@
   "auto_backup": true,
   "backup_interval_days": 365,
   "theme": "light",
-  "database_path": "Z:/☆Junior Supervisor日報/data/handover_system.db",
-  "ui_scale": 1.33,
+  "database_path": "Z:/☆Junior Supervisor日報/HandoverSystem/data/handover_system.db",
+  "ui_scale": 1.53,
   "auto_ui_scale": false
 }

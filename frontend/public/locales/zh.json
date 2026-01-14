@@ -334,8 +334,8 @@
     "databaseInitCopyFailed": "無法複製目前資料庫：{error}",
     "databaseInitCreateFailed": "無法建立空白資料庫：{error}",
     "saveFailed": "設定儲存失敗：{error}",
-    "fontSize": "????",
-    "autoScale": "????????"
+    "fontSize": "字體大小",
+    "autoScale": "依解析度自動調整"
   },
   "stats": {
     "dailyReports": "今日報表",

@@ -396,65 +396,101 @@ class ModernMainFrame:
             bd=1,
         )
 
+    def _safe_configure(self, widget, **kwargs):
+        if not widget:
+            return
+        try:
+            if not widget.winfo_exists():
+                return
+        except tk.TclError:
+            return
+        try:
+            widget.configure(**kwargs)
+        except tk.TclError:
+            return
+
     def _apply_theme_to_fixed_widgets(self):
         colors = self.COLORS
         if hasattr(self, "main_title"):
-            self.main_title.configure(
-                foreground=colors["primary"], background=colors["surface"]
+            self._safe_configure(
+                self.main_title, foreground=colors["primary"], background=colors["surface"]
             )
         if hasattr(self, "subtitle"):
-            self.subtitle.configure(
-                foreground=colors["text_secondary"], background=colors["surface"]
+            self._safe_configure(
+                self.subtitle,
+                foreground=colors["text_secondary"],
+                background=colors["surface"],
             )
         if hasattr(self, "user_info_label"):
-            self.user_info_label.configure(
-                foreground=colors["text_secondary"], background=colors["surface"]
+            self._safe_configure(
+                self.user_info_label,
+                foreground=colors["text_secondary"],
+                background=colors["surface"],
             )
         if hasattr(self, "status_label"):
-            self.status_label.configure(
-                foreground=colors["text_secondary"], background=colors["surface"]
+            self._safe_configure(
+                self.status_label,
+                foreground=colors["text_secondary"],
+                background=colors["surface"],
             )
         if hasattr(self, "status_info_label"):
-            self.status_info_label.configure(
-                foreground=colors["text_secondary"], background=colors["surface"]
+            self._safe_configure(
+                self.status_info_label,
+                foreground=colors["text_secondary"],
+                background=colors["surface"],
             )
         if hasattr(self, "sidebar_title"):
-            self.sidebar_title.configure(
-                background=colors["sidebar"], foreground="white"
+            self._safe_configure(
+                self.sidebar_title, background=colors["sidebar"], foreground="white"
             )
         if hasattr(self, "sidebar_version_label"):
-            self.sidebar_version_label.configure(
-                background=colors["sidebar"], foreground=colors["text_secondary"]
+            self._safe_configure(
+                self.sidebar_version_label,
+                background=colors["sidebar"],
+                foreground=colors["text_secondary"],
             )
         if hasattr(self, "summary_hint_label"):
-            self.summary_hint_label.configure(foreground=colors["text_secondary"])
+            self._safe_configure(
+                self.summary_hint_label, foreground=colors["text_secondary"]
+            )
 
         for entry in self._canvas_widgets:
             widget = entry["widget"]
-            if widget.winfo_exists():
-                widget.configure(background=colors[entry["bg_key"]])
+            self._safe_configure(widget, background=colors[entry["bg_key"]])
 
         for widget in self._text_widgets:
-            if widget.winfo_exists():
-                self._apply_text_widget_colors(widget)
+            try:
+                if widget.winfo_exists():
+                    self._apply_text_widget_colors(widget)
+            except tk.TclError:
+                continue
 
         if hasattr(self, "status_indicator") and hasattr(self, "status_indicator_id"):
-            self.status_indicator.itemconfigure(
-                self.status_indicator_id, fill=colors["success"]
-            )
+            try:
+                self.status_indicator.itemconfigure(
+                    self.status_indicator_id, fill=colors["success"]
+                )
+            except tk.TclError:
+                pass
 
         if hasattr(self, "summary_pie_canvas") and self.summary_pie_canvas:
-            self.summary_pie_canvas.get_tk_widget().configure(
-                background=colors["surface"]
-            )
+            try:
+                self.summary_pie_canvas.get_tk_widget().configure(
+                    background=colors["surface"]
+                )
+            except tk.TclError:
+                pass
         if hasattr(self, "summary_bar_canvas") and self.summary_bar_canvas:
-            self.summary_bar_canvas.get_tk_widget().configure(
-                background=colors["surface"]
-            )
+            try:
+                self.summary_bar_canvas.get_tk_widget().configure(
+                    background=colors["surface"]
+                )
+            except tk.TclError:
+                pass
 
         popup = getattr(self, "_calendar_popup", None)
-        if popup is not None and popup.winfo_exists():
-            popup.configure(background=colors["background"])
+        if popup is not None:
+            self._safe_configure(popup, background=colors["background"])
 
     def _update_theme_toggle_label(self):
         if not hasattr(self, "theme_toggle_btn"):
@@ -3281,6 +3317,29 @@ class ModernMainFrame:
                 ),
             )
 
+    def _format_chart_value(self, value, suffix=""):
+        if value is None:
+            return ""
+        try:
+            if isinstance(value, float):
+                if value != value:
+                    return ""
+                if value.is_integer():
+                    value = int(value)
+                else:
+                    value = round(value, 1)
+            elif isinstance(value, int):
+                value = int(value)
+            else:
+                value = float(value)
+                if value.is_integer():
+                    value = int(value)
+                else:
+                    value = round(value, 1)
+        except (TypeError, ValueError):
+            return ""
+        return f"{value}{suffix}"
+
     def _get_query_chart_target_height(self):
         try:
             screen_height = self.parent.winfo_screenheight()
@@ -3313,6 +3372,7 @@ class ModernMainFrame:
         dates = data["dates"]
         series = data["series"]
         styles = data["styles"]
+        shift_codes = list(series.keys())
         labels = [d.strftime("%Y-%m-%d") for d in dates]
         self._ensure_cjk_font()
         theme = self._get_chart_theme()
@@ -3333,7 +3393,11 @@ class ModernMainFrame:
         ax.set_title(title, fontsize=max(10, int(round(10 * self._ui_scale))))
 
         x = list(range(len(labels)))
-        for shift_code, values in series.items():
+        label_font = max(8, int(round(8 * self._ui_scale)))
+        max_val = 0
+        shift_count = max(1, len(shift_codes))
+        for shift_idx, shift_code in enumerate(shift_codes):
+            values = series.get(shift_code, [])
             style = styles.get(shift_code, {})
             display = self.shift_display_map.get(shift_code, shift_code)
             ax.plot(
@@ -3343,10 +3407,30 @@ class ModernMainFrame:
                 color=style.get("color", theme["line"]),
                 label=display,
             )
+            numeric_values = [val for val in values if val is not None]
+            if numeric_values:
+                max_val = max(max_val, max(numeric_values))
+            x_offset = int(round((shift_idx - (shift_count - 1) / 2) * 6))
+            for idx, value in enumerate(values):
+                label = self._format_chart_value(value, "%")
+                if not label:
+                    continue
+                ax.annotate(
+                    label,
+                    (x[idx], value),
+                    textcoords="offset points",
+                    xytext=(x_offset, int(round(6 * self._ui_scale))),
+                    ha="center",
+                    va="bottom",
+                    fontsize=label_font,
+                    color=style.get("color", theme["line"]),
+                )
         ax.set_xticks(x)
         ax.set_xticklabels(labels, rotation=45, ha="right")
         ax.set_ylabel(self._t("summaryDashboard.rateAxis", "出勤率 (%)"))
-        ax.set_ylim(0, 100)
+        if max_val <= 0:
+            max_val = 100
+        ax.set_ylim(0, max(100, max_val + 5))
         ax.tick_params(axis="y")
         legend = ax.legend(loc="upper right")
         legend.get_frame().set_facecolor(theme["face"])
@@ -3396,6 +3480,14 @@ class ModernMainFrame:
         x = list(range(len(labels)))
         shift_codes = list(series.keys())
         bar_width = 0.8 / max(1, len(shift_codes))
+        max_val = 0
+        for values in series.values():
+            for value in values:
+                if value is None:
+                    continue
+                max_val = max(max_val, value)
+        label_font = max(8, int(round(8 * self._ui_scale)))
+        y_offset = max(0.5, max_val * 0.03)
         for idx, shift_code in enumerate(shift_codes):
             values = series[shift_code]
             style = styles.get(shift_code, {})
@@ -3415,9 +3507,24 @@ class ModernMainFrame:
                 marker=style.get("marker", "o"),
                 color=style.get("color", theme["bar_primary"]),
             )
+            for item_idx, value in enumerate(values):
+                label = self._format_chart_value(value)
+                if not label:
+                    continue
+                ax.text(
+                    offset[item_idx],
+                    value + y_offset,
+                    label,
+                    ha="center",
+                    va="bottom",
+                    fontsize=label_font,
+                    color=style.get("color", theme["bar_primary"]),
+                )
         ax.set_xticks(x)
         ax.set_xticklabels(labels, rotation=45, ha="right")
         ax.set_ylabel(self._t("queryHub.overtimeCount", "加班人數"))
+        if max_val > 0:
+            ax.set_ylim(0, max_val + y_offset * 5)
         legend = ax.legend(loc="upper right")
         legend.get_frame().set_facecolor(theme["face"])
         legend.get_frame().set_edgecolor(theme["grid"])
