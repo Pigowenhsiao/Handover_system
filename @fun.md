@@ -593,10 +593,12 @@ This script is procedural only (no function definitions).
 | `create_equipment_page` | Build equipment page. |
 | `create_lot_page` | Build lot page. |
 | `create_summary_page` | Build summary page. |
+| `create_query_hub_page` | Build the query hub entry page. |
 | `create_summary_query_page` | Build summary query page. |
 | `create_abnormal_history_page` | Build abnormal history page. |
 | `_abnormal_scroll_setup` | Configure abnormal page scrolling. |
 | `_summary_scroll_setup` | Configure summary page scrolling. |
+| `_create_query_scroll_container` | Create a scrollable container with horizontal and vertical scrollbars. |
 | `_bind_canvas_mousewheel` | Bind mousewheel scrolling. |
 | `_update_summary_dashboard_headers` | Refresh summary dashboard headers. |
 | `_build_attendance_notes` | Build attendance notes text. |
@@ -657,6 +659,8 @@ This script is procedural only (no function definitions).
 | `_can_close_app` | Determine if app can close. |
 | `_on_app_close` | Handle window close event. |
 | `_request_restart` | Request application restart. |
+| `_backup_database_on_exit` | Create a dated backup copy of the current database on exit. |
+| `_verify_backup_file` | Validate the backup file exists and is readable. |
 | `toggle_auth` | Toggle login/logout flow. |
 | `attempt_login` | Perform login attempt. |
 | `logout` | Log out current user. |
@@ -665,6 +669,23 @@ This script is procedural only (no function definitions).
 | `_update_admin_tab_texts` | Refresh admin tab text. |
 | `_update_shift_values` | Refresh shift value lists. |
 | `_get_shift_code` | Map shift display to shift code. |
+| `_create_query_nav_card` | Create a navigation card for query hub sections. |
+| `_set_query_nav_active` | Highlight the active query hub navigation card. |
+| `_show_query_section` | Switch between query hub sections. |
+| `_build_query_filters` | Build the query filter card and controls. |
+| `_update_query_filter_options` | Refresh query filter dropdown options. |
+| `_resolve_query_filters` | Parse and validate query filter inputs. |
+| `_get_shift_styles` | Build color/marker styles for shift chart series. |
+| `_build_attendance_query_section` | Build attendance/overtime query section UI. |
+| `_build_equipment_query_section` | Build equipment query section UI. |
+| `_build_lot_query_section` | Build lot query section UI. |
+| `_run_attendance_overtime_query` | Execute attendance and overtime query. |
+| `_run_equipment_query` | Execute equipment query. |
+| `_run_lot_query` | Execute lot query. |
+| `_render_query_attendance_chart` | Render attendance rate chart for query hub. |
+| `_render_query_overtime_chart` | Render overtime count chart for query hub. |
+| `_render_query_issue_chart` | Render equipment/lot issue charts for query hub. |
+| `_refresh_query_charts` | Re-render query hub charts on language/theme updates. |
 | `refresh_shift_area_options` | Reload shift/area options. |
 | `add_equipment_record` | Add equipment record to report. |
 | `view_equipment_history` | Show equipment history. |

@@ -18,6 +18,7 @@
     "equipment": "設備異常",
     "lot": "異常批次",
     "summary": "人員出勤率",
+    "queryHub": "資料庫查詢",
     "summaryQuery": "摘要查詢",
     "abnormalHistory": "異常歷史",
     "masterData": "基本資料管理",
@@ -155,6 +156,10 @@
       "title": "人員出勤率",
       "subtitle": "依日期區間彙整出勤率"
     },
+    "queryHub": {
+      "title": "資料庫查詢",
+      "subtitle": "依條件查詢出勤、機台異常與異常 Lot"
+    },
     "summaryQuery": {
       "title": "摘要查詢",
       "subtitle": "依起訖日/班別/區域查詢日報摘要"
@@ -222,6 +227,26 @@
     "missingRange": "請先選擇查詢起日與迄日。",
     "invalidRange": "迄日不可早於起日。",
     "loadFailed": "摘要查詢失敗：{error}"
+  },
+  "queryHub": {
+    "attendance": "出勤與加班查詢",
+    "equipment": "機台異常查詢",
+    "lot": "異常 Lot 查詢",
+    "filters": "查詢條件",
+    "attendanceTable": "出勤狀況表",
+    "attendanceChart": "出勤率圖表",
+    "overtimeTable": "加班明細表",
+    "overtimeChart": "加班人數圖表",
+    "overtimeChartTitle": "加班人數趨勢",
+    "overtimeCategory": "加班類別",
+    "overtimeCount": "加班人數",
+    "equipmentTable": "機台異常表",
+    "equipmentChart": "機台異常圖表",
+    "equipmentChartTitle": "機台異常趨勢",
+    "lotTable": "異常 Lot 表",
+    "lotChart": "異常 Lot 圖表",
+    "lotChartTitle": "異常 Lot 趨勢",
+    "issueCountAxis": "筆數"
   },
   "summaryDashboard": {
     "startDate": "統計開始日期",

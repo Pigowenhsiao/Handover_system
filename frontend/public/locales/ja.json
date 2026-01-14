@@ -18,6 +18,7 @@
     "equipment": "設備異常",
     "lot": "異常ロット",
     "summary": "出勤率",
+    "queryHub": "データベース検索",
     "summaryQuery": "サマリー検索",
     "abnormalHistory": "異常履歴",
     "masterData": "基本データ管理",
@@ -155,6 +156,10 @@
       "title": "出勤率",
       "subtitle": "期間内の出勤率を集計"
     },
+    "queryHub": {
+      "title": "データベース検索",
+      "subtitle": "出勤・設備異常・ロット異常を条件検索"
+    },
     "summaryQuery": {
       "title": "サマリー検索",
       "subtitle": "期間・シフト・エリアで日報サマリーを検索"
@@ -222,6 +227,26 @@
     "missingRange": "開始日と終了日を選択してください。",
     "invalidRange": "終了日は開始日より前にできません。",
     "loadFailed": "サマリー検索に失敗しました：{error}"
+  },
+  "queryHub": {
+    "attendance": "出勤・残業検索",
+    "equipment": "設備異常検索",
+    "lot": "異常ロット検索",
+    "filters": "検索条件",
+    "attendanceTable": "出勤状況表",
+    "attendanceChart": "出勤率グラフ",
+    "overtimeTable": "残業明細表",
+    "overtimeChart": "残業人数グラフ",
+    "overtimeChartTitle": "残業人数推移",
+    "overtimeCategory": "残業区分",
+    "overtimeCount": "残業人数",
+    "equipmentTable": "設備異常表",
+    "equipmentChart": "設備異常グラフ",
+    "equipmentChartTitle": "設備異常推移",
+    "lotTable": "異常ロット表",
+    "lotChart": "異常ロットグラフ",
+    "lotChartTitle": "異常ロット推移",
+    "issueCountAxis": "件数"
   },
   "summaryDashboard": {
     "startDate": "統計開始日",
@@ -310,7 +335,7 @@
     "databaseInitCreateFailed": "空のデータベースを作成できませんでした：{error}",
     "saveFailed": "設定の保存に失敗しました：{error}",
     "fontSize": "?????",
-    "autoScale": "????????"
+    "autoScale": "????????????"
   },
   "stats": {
     "dailyReports": "本日のレポート",

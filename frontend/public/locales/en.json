@@ -18,6 +18,7 @@
     "equipment": "Equipment",
     "lot": "Lot Issues",
     "summary": "Attendance Rate",
+    "queryHub": "Database Query",
     "summaryQuery": "Summary Query",
     "abnormalHistory": "Abnormal History",
     "masterData": "Master Data Management",
@@ -155,6 +156,10 @@
       "title": "Attendance Rate",
       "subtitle": "Aggregate attendance rate by date range"
     },
+    "queryHub": {
+      "title": "Database Query",
+      "subtitle": "Query attendance, equipment issues, and abnormal lots"
+    },
     "summaryQuery": {
       "title": "Summary Query",
       "subtitle": "Search daily report summaries by date, shift, and area"
@@ -222,6 +227,26 @@
     "missingRange": "Please select both start and end dates.",
     "invalidRange": "End date cannot be earlier than start date.",
     "loadFailed": "Failed to load summary query: {error}"
+  },
+  "queryHub": {
+    "attendance": "Attendance & Overtime",
+    "equipment": "Equipment Issues",
+    "lot": "Abnormal Lots",
+    "filters": "Query Filters",
+    "attendanceTable": "Attendance Table",
+    "attendanceChart": "Attendance Rate Chart",
+    "overtimeTable": "Overtime Table",
+    "overtimeChart": "Overtime Count Chart",
+    "overtimeChartTitle": "Overtime Trend",
+    "overtimeCategory": "Overtime Type",
+    "overtimeCount": "Overtime Count",
+    "equipmentTable": "Equipment Issues Table",
+    "equipmentChart": "Equipment Issues Chart",
+    "equipmentChartTitle": "Equipment Issues Trend",
+    "lotTable": "Abnormal Lot Table",
+    "lotChart": "Abnormal Lot Chart",
+    "lotChartTitle": "Abnormal Lot Trend",
+    "issueCountAxis": "Count"
   },
   "summaryDashboard": {
     "startDate": "Start Date",

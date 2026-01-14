@@ -108,6 +108,8 @@ class ModernMainFrame:
             "summary",
             "summary_query",
             "abnormal_history",
+            "query_hub",
+            "admin",
         }
         self._closing = False
         self.layout = {
@@ -213,7 +215,40 @@ class ModernMainFrame:
         scaled = int(round(size * self._ui_scale))
         return max(8, scaled)
 
-    def _font(self, size, weight=None, slant=None, *, family="Segoe UI"):
+    def _get_ui_font_family(self):
+        if getattr(self, "_ui_font_family", None):
+            return self._ui_font_family
+        candidates = [
+            "Yu Gothic UI",
+            "Yu Gothic",
+            "Meiryo UI",
+            "Meiryo",
+            "Microsoft JhengHei UI",
+            "Microsoft JhengHei",
+            "Microsoft YaHei UI",
+            "Microsoft YaHei",
+            "Noto Sans CJK JP",
+            "Noto Sans CJK TC",
+            "Noto Sans CJK SC",
+            "Arial Unicode MS",
+            "Segoe UI",
+        ]
+        available = set()
+        try:
+            import tkinter.font as tkfont
+
+            available = set(tkfont.families(self.parent))
+        except Exception:
+            available = set()
+        for name in candidates:
+            if not available or name in available:
+                self._ui_font_family = name
+                return name
+        self._ui_font_family = "Segoe UI"
+        return self._ui_font_family
+
+    def _font(self, size, weight=None, slant=None, *, family=None):
+        family = family or self._get_ui_font_family()
         parts = [family, self._scale_font_size(size)]
         if weight:
             parts.append(weight)
@@ -934,6 +969,7 @@ class ModernMainFrame:
             ("delay_list", "⏱️", "navigation.delayList", "延遲清單"),
             ("summary_actual", "🧾", "navigation.summaryActual", "Summary Actual"),
             ("admin", "⚙️", "navigation.admin", "系統管理"),
+            ("query_hub", "🧭", "navigation.queryHub", "資料庫查詢"),
         ]
 
         for item_id, icon, text_key, text_default in self._nav_items:
@@ -1198,6 +1234,8 @@ class ModernMainFrame:
             self.create_lot_page()
         elif page_id == "summary":
             self.create_summary_page()
+        elif page_id == "query_hub":
+            self.create_query_hub_page()
         elif page_id == "summary_query":
             self.create_summary_query_page()
         elif page_id == "abnormal_history":
@@ -2312,6 +2350,1138 @@ class ModernMainFrame:
         self.summary_dashboard_data = None
         self._render_summary_charts(None)
         self.parent.after(0, self._sync_summary_chart_height)
+
+    def create_query_hub_page(self):
+        """建立資料庫查詢主入口頁面"""
+        self._register_text(
+            self.page_title, "pages.queryHub.title", "資料庫查詢", scope="page"
+        )
+        self._register_text(
+            self.page_subtitle,
+            "pages.queryHub.subtitle",
+            "依條件查詢出勤、機台異常與異常 Lot",
+            scope="page",
+        )
+
+        page_frame = ttk.Frame(self.page_content, style="Modern.TFrame")
+        page_frame.pack(fill="both", expand=True)
+        page_frame.columnconfigure(0, weight=1)
+        page_frame.rowconfigure(1, weight=1)
+
+        nav_frame = ttk.Frame(page_frame, style="Modern.TFrame")
+        nav_frame.grid(row=0, column=0, sticky="ew", pady=(0, 12))
+
+        self.query_nav_cards = {}
+        self.query_sections = {}
+        self.query_filter_controls = []
+
+        self._create_query_nav_card(
+            nav_frame,
+            "attendance_overtime",
+            "queryHub.attendance",
+            "出勤與加班查詢",
+        )
+        self._create_query_nav_card(
+            nav_frame, "equipment_query", "queryHub.equipment", "機台異常查詢"
+        )
+        self._create_query_nav_card(
+            nav_frame, "lot_query", "queryHub.lot", "異常 Lot 查詢"
+        )
+
+        content_frame = ttk.Frame(page_frame, style="Modern.TFrame")
+        content_frame.grid(row=1, column=0, sticky="nsew")
+        content_frame.columnconfigure(0, weight=1)
+        content_frame.rowconfigure(0, weight=1)
+
+        attendance_frame = ttk.Frame(content_frame, style="Modern.TFrame")
+        attendance_frame.grid(row=0, column=0, sticky="nsew")
+        self.query_sections["attendance_overtime"] = attendance_frame
+        self._build_attendance_query_section(attendance_frame)
+
+        equipment_frame = ttk.Frame(content_frame, style="Modern.TFrame")
+        equipment_frame.grid(row=0, column=0, sticky="nsew")
+        self.query_sections["equipment_query"] = equipment_frame
+        self._build_equipment_query_section(equipment_frame)
+
+        lot_frame = ttk.Frame(content_frame, style="Modern.TFrame")
+        lot_frame.grid(row=0, column=0, sticky="nsew")
+        self.query_sections["lot_query"] = lot_frame
+        self._build_lot_query_section(lot_frame)
+
+        self._show_query_section("attendance_overtime")
+
+    def _create_query_nav_card(self, parent, section_id, text_key, text_default):
+        card = ttk.Frame(parent, style="Card.TFrame")
+        card.pack(side="left", padx=(0, 12))
+        label = ttk.Label(card, style="CardTitle.TLabel")
+        self._register_text(label, text_key, text_default, scope="page")
+        label.pack(padx=18, pady=12)
+        card.bind("<Button-1>", lambda _e: self._show_query_section(section_id))
+        label.bind("<Button-1>", lambda _e: self._show_query_section(section_id))
+        self.query_nav_cards[section_id] = {"card": card, "label": label}
+
+    def _set_query_nav_active(self, section_id):
+        if not hasattr(self, "query_nav_cards"):
+            return
+        active_color = self.COLORS.get("primary", "#1976D2")
+        default_color = self.COLORS.get("text_primary", "#212121")
+        for key, meta in self.query_nav_cards.items():
+            label = meta.get("label")
+            if not label or not label.winfo_exists():
+                continue
+            label.configure(
+                foreground=active_color if key == section_id else default_color
+            )
+
+    def _show_query_section(self, section_id):
+        if not hasattr(self, "query_sections"):
+            return
+        for key, frame in self.query_sections.items():
+            if key == section_id:
+                frame.grid()
+            else:
+                frame.grid_remove()
+        self._set_query_nav_active(section_id)
+        self.query_active_section = section_id
+
+    def _create_query_scroll_container(self, parent):
+        container = ttk.Frame(parent, style="Modern.TFrame")
+        container.pack(fill="both", expand=True)
+        container.columnconfigure(0, weight=1)
+        container.rowconfigure(0, weight=1)
+
+        canvas = tk.Canvas(
+            container, background=self.COLORS["background"], highlightthickness=0
+        )
+        self._register_canvas_widget(canvas, "background")
+        canvas.grid(row=0, column=0, sticky="nsew")
+
+        v_scroll = ttk.Scrollbar(container, orient="vertical", command=canvas.yview)
+        v_scroll.grid(row=0, column=1, sticky="ns")
+        h_scroll = ttk.Scrollbar(container, orient="horizontal", command=canvas.xview)
+        h_scroll.grid(row=1, column=0, sticky="ew")
+        canvas.configure(yscrollcommand=v_scroll.set, xscrollcommand=h_scroll.set)
+
+        frame = ttk.Frame(canvas, style="Modern.TFrame")
+        window = canvas.create_window((0, 0), window=frame, anchor="nw")
+
+        def _on_frame_config(_event):
+            canvas.configure(scrollregion=canvas.bbox("all"))
+
+        def _on_canvas_config(event):
+            bbox = canvas.bbox("all")
+            if not bbox:
+                return
+            content_width = max(bbox[2] - bbox[0], frame.winfo_reqwidth())
+            canvas.itemconfigure(window, width=max(event.width, content_width))
+
+        frame.bind("<Configure>", _on_frame_config)
+        canvas.bind("<Configure>", _on_canvas_config)
+        self._bind_canvas_mousewheel(frame, canvas)
+        return {"container": container, "canvas": canvas, "frame": frame}
+
+    def _build_query_filters(self, parent, on_search):
+        filter_card = self.create_card(parent, "🔍", "queryHub.filters", "查詢條件")
+        filter_card.pack(fill="x", pady=(0, 16))
+
+        control_frame = ttk.Frame(filter_card, style="Card.TFrame")
+        control_frame.pack(
+            fill="x", padx=self.layout["card_pad"], pady=self.layout["card_pad"]
+        )
+
+        start_label = ttk.Label(control_frame, font=self._font(10))
+        self._register_text(
+            start_label, "summaryDashboard.startDate", "統計開始日期", scope="page"
+        )
+        start_label.grid(row=0, column=0, sticky="w", pady=self.layout["row_pad"])
+        start_var = tk.StringVar()
+        start_frame = ttk.Frame(control_frame, style="Card.TFrame")
+        start_frame.grid(
+            row=0,
+            column=1,
+            sticky="w",
+            padx=(self.layout["field_gap"], 0),
+            pady=self.layout["row_pad"],
+        )
+        self._create_date_picker(start_frame, start_var, width=14)
+
+        end_label = ttk.Label(control_frame, font=self._font(10))
+        self._register_text(
+            end_label, "summaryDashboard.endDate", "統計結束日期", scope="page"
+        )
+        end_label.grid(
+            row=0, column=2, sticky="w", padx=(20, 0), pady=self.layout["row_pad"]
+        )
+        end_var = tk.StringVar()
+        end_frame = ttk.Frame(control_frame, style="Card.TFrame")
+        end_frame.grid(
+            row=0,
+            column=3,
+            sticky="w",
+            padx=(self.layout["field_gap"], 0),
+            pady=self.layout["row_pad"],
+        )
+        self._create_date_picker(end_frame, end_var, width=14)
+
+        shift_label = ttk.Label(control_frame, font=self._font(10))
+        self._register_text(shift_label, "fields.shift", "班別：", scope="page")
+        shift_label.grid(row=1, column=0, sticky="w", pady=self.layout["row_pad"])
+        shift_var = tk.StringVar()
+        shift_combo = ttk.Combobox(
+            control_frame, textvariable=shift_var, state="readonly", width=16
+        )
+        shift_combo.grid(
+            row=1,
+            column=1,
+            sticky="w",
+            padx=(self.layout["field_gap"], 0),
+            pady=self.layout["row_pad"],
+        )
+
+        area_label = ttk.Label(control_frame, font=self._font(10))
+        self._register_text(area_label, "fields.area", "區域：", scope="page")
+        area_label.grid(
+            row=1, column=2, sticky="w", padx=(20, 0), pady=self.layout["row_pad"]
+        )
+        area_var = tk.StringVar()
+        area_combo = ttk.Combobox(
+            control_frame, textvariable=area_var, state="readonly", width=16
+        )
+        area_combo.grid(
+            row=1,
+            column=3,
+            sticky="w",
+            padx=(self.layout["field_gap"], 0),
+            pady=self.layout["row_pad"],
+        )
+
+        search_btn = ttk.Button(
+            control_frame, style="Primary.TButton", command=on_search
+        )
+        self._register_text(search_btn, "common.search", "查詢", scope="page")
+        search_btn.grid(row=0, column=4, rowspan=2, padx=(20, 0))
+
+        start_default, end_default = self._get_month_date_range()
+        start_var.set(start_default)
+        end_var.set(end_default)
+
+        self._update_filter_options(shift_combo, shift_var, area_combo, area_var)
+        self.query_filter_controls.append(
+            {
+                "shift_combo": shift_combo,
+                "shift_var": shift_var,
+                "area_combo": area_combo,
+                "area_var": area_var,
+            }
+        )
+
+        return {
+            "start_var": start_var,
+            "end_var": end_var,
+            "shift_var": shift_var,
+            "area_var": area_var,
+            "shift_combo": shift_combo,
+            "area_combo": area_combo,
+        }
+
+    def _update_query_filter_options(self):
+        if not hasattr(self, "query_filter_controls"):
+            return
+        for control in self.query_filter_controls:
+            self._update_filter_options(
+                control["shift_combo"],
+                control["shift_var"],
+                control["area_combo"],
+                control["area_var"],
+            )
+
+    def _resolve_query_filters(self, start_var, end_var, shift_var, area_var):
+        start = start_var.get().strip()
+        end = end_var.get().strip()
+        if not start or not end:
+            messagebox.showwarning(
+                self._t("common.warning", "提醒"),
+                self._t("summaryDashboard.missingRange", "請先選擇統計開始日期與結束日期。"),
+            )
+            return None, None, None, None
+        try:
+            start_date = datetime.strptime(start, "%Y-%m-%d").date()
+            end_date = datetime.strptime(end, "%Y-%m-%d").date()
+        except ValueError:
+            messagebox.showwarning(
+                self._t("common.warning", "提醒"),
+                self._t("errors.invalidDateFormat", "日期格式需為 YYYY-MM-DD"),
+            )
+            return None, None, None, None
+        if end_date < start_date:
+            messagebox.showwarning(
+                self._t("common.warning", "提醒"),
+                self._t("summaryDashboard.invalidRange", "結束日期不可早於開始日期。"),
+            )
+            return None, None, None, None
+
+        self._load_shift_area_options()
+        all_label = self._t("common.all", "全部")
+        all_labels = {"All", all_label, "全部", "全選"}
+        shift_display = shift_var.get().strip()
+        shift_code = None
+        if shift_display and shift_display not in all_labels:
+            shift_code = self.shift_code_map.get(shift_display, shift_display)
+        area_value = area_var.get().strip()
+        if area_value in all_labels:
+            area_value = None
+        return start_date, end_date, shift_code, area_value
+
+    def _get_shift_styles(self, shift_codes):
+        theme = self._get_chart_theme()
+        palette = [
+            theme.get("line"),
+            theme.get("bar_primary"),
+            theme.get("bar_accent"),
+            self.COLORS.get("warning", "#f57c00"),
+            self.COLORS.get("primary_dark", "#1565C0"),
+        ]
+        markers = ["o", "s", "D", "^", "v", "P", "X"]
+        styles = {}
+        for idx, code in enumerate(shift_codes):
+            styles[code] = {
+                "color": palette[idx % len(palette)],
+                "marker": markers[idx % len(markers)],
+            }
+        return styles
+
+    def _build_attendance_query_section(self, parent):
+        filters = self._build_query_filters(parent, self._run_attendance_overtime_query)
+        self.query_attendance_filters = filters
+
+        scroll = self._create_query_scroll_container(parent)
+        results_frame = scroll["frame"]
+
+        attendance_card = self.create_card(
+            results_frame,
+            "👥",
+            "queryHub.attendanceTable",
+            "出勤狀況表",
+        )
+        attendance_card.pack(fill="both", expand=True, pady=(0, 20))
+        attendance_inner = ttk.Frame(attendance_card, style="Card.TFrame")
+        attendance_inner.pack(
+            fill="both",
+            expand=True,
+            padx=self.layout["card_pad"],
+            pady=self.layout["card_pad"],
+        )
+        attendance_cols = (
+            "date",
+            "shift",
+            "area",
+            "author",
+            "regular_present",
+            "regular_absent",
+            "contract_present",
+            "contract_absent",
+            "overtime_count",
+            "total_attendance",
+            "notes",
+        )
+        self.query_attendance_columns = attendance_cols
+        self.query_attendance_header_keys = [
+            ("common.date", "日期"),
+            ("common.shift", "班別"),
+            ("common.area", "區域"),
+            ("common.author", "填寫者"),
+            ("summaryDashboard.regularPresent", "正社員出勤"),
+            ("summaryDashboard.regularAbsent", "正社員欠勤"),
+            ("summaryDashboard.contractPresent", "契約社員出勤"),
+            ("summaryDashboard.contractAbsent", "契約社員欠勤"),
+            ("summaryDashboard.overtimeCount", "加班人數"),
+            ("summaryDashboard.totalAttendance", "出勤總數"),
+            ("common.notes", "備註"),
+        ]
+        attendance_tree_data = create_treeview_with_scrollbars(
+            attendance_inner,
+            columns=attendance_cols,
+            header_keys=self.query_attendance_header_keys,
+            height=10,
+            horizontal_scrollbar=True,
+            translate=self._t,
+        )
+        self.query_attendance_tree = attendance_tree_data["tree"]
+        self._configure_query_attendance_tree = attendance_tree_data["configure"]
+
+        attendance_chart_card = self.create_card(
+            results_frame,
+            "📈",
+            "queryHub.attendanceChart",
+            "出勤率圖表",
+        )
+        attendance_chart_card.pack(fill="both", expand=True, pady=(0, 20))
+        attendance_chart_frame = ttk.Frame(attendance_chart_card, style="Card.TFrame")
+        attendance_chart_frame.pack(
+            fill="both",
+            expand=True,
+            padx=self.layout["card_pad"],
+            pady=self.layout["card_pad"],
+        )
+        self.query_attendance_chart_frame = attendance_chart_frame
+
+        overtime_card = self.create_card(
+            results_frame,
+            "⏱️",
+            "queryHub.overtimeTable",
+            "加班明細表",
+        )
+        overtime_card.pack(fill="both", expand=True, pady=(0, 20))
+        overtime_inner = ttk.Frame(overtime_card, style="Card.TFrame")
+        overtime_inner.pack(
+            fill="both",
+            expand=True,
+            padx=self.layout["card_pad"],
+            pady=self.layout["card_pad"],
+        )
+        overtime_cols = ("date", "shift", "area", "category", "count", "notes")
+        self.query_overtime_columns = overtime_cols
+        self.query_overtime_header_keys = [
+            ("common.date", "日期"),
+            ("common.shift", "班別"),
+            ("common.area", "區域"),
+            ("queryHub.overtimeCategory", "加班類別"),
+            ("queryHub.overtimeCount", "加班人數"),
+            ("common.notes", "備註"),
+        ]
+        overtime_tree_data = create_treeview_with_scrollbars(
+            overtime_inner,
+            columns=overtime_cols,
+            header_keys=self.query_overtime_header_keys,
+            height=8,
+            horizontal_scrollbar=True,
+            translate=self._t,
+        )
+        self.query_overtime_tree = overtime_tree_data["tree"]
+        self._configure_query_overtime_tree = overtime_tree_data["configure"]
+
+        overtime_chart_card = self.create_card(
+            results_frame,
+            "📊",
+            "queryHub.overtimeChart",
+            "加班人數圖表",
+        )
+        overtime_chart_card.pack(fill="both", expand=True)
+        overtime_chart_frame = ttk.Frame(overtime_chart_card, style="Card.TFrame")
+        overtime_chart_frame.pack(
+            fill="both",
+            expand=True,
+            padx=self.layout["card_pad"],
+            pady=self.layout["card_pad"],
+        )
+        self.query_overtime_chart_frame = overtime_chart_frame
+
+        self.query_attendance_chart_data = None
+        self.query_overtime_chart_data = None
+
+    def _build_equipment_query_section(self, parent):
+        filters = self._build_query_filters(parent, self._run_equipment_query)
+        self.query_equipment_filters = filters
+
+        scroll = self._create_query_scroll_container(parent)
+        results_frame = scroll["frame"]
+
+        equipment_card = self.create_card(
+            results_frame,
+            "⚙️",
+            "queryHub.equipmentTable",
+            "機台異常表",
+        )
+        equipment_card.pack(fill="both", expand=True, pady=(0, 20))
+        equipment_inner = ttk.Frame(equipment_card, style="Card.TFrame")
+        equipment_inner.pack(
+            fill="both",
+            expand=True,
+            padx=self.layout["card_pad"],
+            pady=self.layout["card_pad"],
+        )
+        eq_cols = (
+            "date",
+            "shift",
+            "area",
+            "equip_id",
+            "description",
+            "start_time",
+            "impact_qty",
+            "impact_hours",
+            "action_taken",
+        )
+        self.query_equipment_columns = eq_cols
+        self.query_equipment_header_keys = [
+            ("common.date", "日期"),
+            ("common.shift", "班別"),
+            ("common.area", "區域"),
+            ("equipment.equipId", "設備編號"),
+            ("common.description", "異常描述"),
+            ("equipment.startTime", "開始時間"),
+            ("equipment.impactQty", "影響數量"),
+            ("equipment.impactHours", "影響時數"),
+            ("equipment.actionTaken", "處置方式"),
+        ]
+        equipment_tree_data = create_treeview_with_scrollbars(
+            equipment_inner,
+            columns=eq_cols,
+            header_keys=self.query_equipment_header_keys,
+            height=10,
+            horizontal_scrollbar=True,
+            translate=self._t,
+        )
+        self.query_equipment_tree = equipment_tree_data["tree"]
+        self._configure_query_equipment_tree = equipment_tree_data["configure"]
+
+        equipment_chart_card = self.create_card(
+            results_frame,
+            "📊",
+            "queryHub.equipmentChart",
+            "機台異常趨勢",
+        )
+        equipment_chart_card.pack(fill="both", expand=True)
+        equipment_chart_frame = ttk.Frame(equipment_chart_card, style="Card.TFrame")
+        equipment_chart_frame.pack(
+            fill="both",
+            expand=True,
+            padx=self.layout["card_pad"],
+            pady=self.layout["card_pad"],
+        )
+        self.query_equipment_chart_frame = equipment_chart_frame
+        self.query_equipment_chart_data = None
+
+    def _build_lot_query_section(self, parent):
+        filters = self._build_query_filters(parent, self._run_lot_query)
+        self.query_lot_filters = filters
+
+        scroll = self._create_query_scroll_container(parent)
+        results_frame = scroll["frame"]
+
+        lot_card = self.create_card(
+            results_frame,
+            "📦",
+            "queryHub.lotTable",
+            "異常 Lot 表",
+        )
+        lot_card.pack(fill="both", expand=True, pady=(0, 20))
+        lot_inner = ttk.Frame(lot_card, style="Card.TFrame")
+        lot_inner.pack(
+            fill="both",
+            expand=True,
+            padx=self.layout["card_pad"],
+            pady=self.layout["card_pad"],
+        )
+        lot_cols = ("date", "shift", "area", "lot_id", "description", "status", "notes")
+        self.query_lot_columns = lot_cols
+        self.query_lot_header_keys = [
+            ("common.date", "日期"),
+            ("common.shift", "班別"),
+            ("common.area", "區域"),
+            ("lot.lotId", "Lot"),
+            ("common.description", "異常描述"),
+            ("lot.status", "狀態"),
+            ("lot.notes", "備註"),
+        ]
+        lot_tree_data = create_treeview_with_scrollbars(
+            lot_inner,
+            columns=lot_cols,
+            header_keys=self.query_lot_header_keys,
+            height=10,
+            horizontal_scrollbar=True,
+            translate=self._t,
+        )
+        self.query_lot_tree = lot_tree_data["tree"]
+        self._configure_query_lot_tree = lot_tree_data["configure"]
+
+        lot_chart_card = self.create_card(
+            results_frame,
+            "📊",
+            "queryHub.lotChart",
+            "異常 Lot 趨勢",
+        )
+        lot_chart_card.pack(fill="both", expand=True)
+        lot_chart_frame = ttk.Frame(lot_chart_card, style="Card.TFrame")
+        lot_chart_frame.pack(
+            fill="both",
+            expand=True,
+            padx=self.layout["card_pad"],
+            pady=self.layout["card_pad"],
+        )
+        self.query_lot_chart_frame = lot_chart_frame
+        self.query_lot_chart_data = None
+
+    def _run_attendance_overtime_query(self):
+        if not hasattr(self, "query_attendance_filters"):
+            return
+        start_date, end_date, shift_code, area_value = self._resolve_query_filters(
+            self.query_attendance_filters["start_var"],
+            self.query_attendance_filters["end_var"],
+            self.query_attendance_filters["shift_var"],
+            self.query_attendance_filters["area_var"],
+        )
+        if not start_date:
+            return
+        self._clear_tree(self.query_attendance_tree)
+        self._clear_tree(self.query_overtime_tree)
+        try:
+            with SessionLocal() as db:
+                report_query = (
+                    db.query(DailyReport)
+                    .options(joinedload(DailyReport.author))
+                    .filter(
+                        DailyReport.date >= start_date,
+                        DailyReport.date <= end_date,
+                        DailyReport.is_hidden == 0,
+                    )
+                )
+                if shift_code:
+                    report_query = report_query.filter(DailyReport.shift == shift_code)
+                if area_value:
+                    report_query = report_query.filter(DailyReport.area == area_value)
+                reports = report_query.order_by(
+                    DailyReport.date, DailyReport.shift, DailyReport.area
+                ).all()
+                if not reports:
+                    self.query_attendance_chart_data = None
+                    self.query_overtime_chart_data = None
+                    self._render_query_attendance_chart(None)
+                    self._render_query_overtime_chart(None)
+                    messagebox.showinfo(
+                        self._t("common.info", "資訊"),
+                        self._t("common.emptyData", "查無資料"),
+                    )
+                    return
+
+                report_ids = [report.id for report in reports]
+                attendance_rows = (
+                    db.query(AttendanceEntry)
+                    .filter(AttendanceEntry.report_id.in_(report_ids))
+                    .all()
+                )
+                overtime_rows = (
+                    db.query(OvertimeEntry)
+                    .filter(OvertimeEntry.report_id.in_(report_ids))
+                    .all()
+                )
+
+            report_map = {report.id: report for report in reports}
+            attendance_by_report = {}
+            overtime_by_report = {}
+            for report in reports:
+                attendance_by_report[report.id] = {
+                    "regular": {"present": 0, "absent": 0, "reason": ""},
+                    "contract": {"present": 0, "absent": 0, "reason": ""},
+                }
+                overtime_by_report[report.id] = {"regular": 0, "contract": 0}
+
+            for row in attendance_rows:
+                category = (row.category or "").lower()
+                bucket = "regular" if category.startswith("reg") else "contract"
+                target = attendance_by_report.get(row.report_id)
+                if not target:
+                    continue
+                slot = target[bucket]
+                slot["present"] += int(row.present_count or 0)
+                slot["absent"] += int(row.absent_count or 0)
+                reason = (row.reason or "").strip()
+                if reason:
+                    slot["reason"] = (
+                        f"{slot['reason']} / {reason}" if slot["reason"] else reason
+                    )
+
+            for row in overtime_rows:
+                bucket = (
+                    "regular"
+                    if (row.category or "").lower().startswith("reg")
+                    else "contract"
+                )
+                if row.report_id in overtime_by_report:
+                    overtime_by_report[row.report_id][bucket] += int(row.count or 0)
+                report = report_map.get(row.report_id)
+                if not report:
+                    continue
+                label_key = (
+                    "attendance.overtime_regular"
+                    if bucket == "regular"
+                    else "attendance.overtime_contract"
+                )
+                self.query_overtime_tree.insert(
+                    "",
+                    "end",
+                    values=(
+                        report.date.strftime("%Y-%m-%d"),
+                        self._format_shift_display(report.shift),
+                        report.area,
+                        self._t(label_key, bucket.title()),
+                        int(row.count or 0),
+                        row.notes or "",
+                    ),
+                )
+
+            chart_counts = defaultdict(
+                lambda: {"present": 0, "absent": 0, "overtime": 0}
+            )
+            for report in reports:
+                attendance = attendance_by_report.get(report.id, {})
+                regular = attendance.get("regular", {})
+                contract = attendance.get("contract", {})
+                regular_present = regular.get("present", 0)
+                regular_absent = regular.get("absent", 0)
+                contract_present = contract.get("present", 0)
+                contract_absent = contract.get("absent", 0)
+                overtime_total = sum(overtime_by_report.get(report.id, {}).values())
+                total_attendance = regular_present + contract_present + overtime_total
+                notes = self._build_attendance_notes(
+                    regular.get("reason", ""), contract.get("reason", "")
+                )
+                author_name = report.author.username if report.author else ""
+
+                self.query_attendance_tree.insert(
+                    "",
+                    "end",
+                    values=(
+                        report.date.strftime("%Y-%m-%d"),
+                        self._format_shift_display(report.shift),
+                        report.area,
+                        author_name,
+                        regular_present,
+                        regular_absent,
+                        contract_present,
+                        contract_absent,
+                        overtime_total,
+                        total_attendance,
+                        notes,
+                    ),
+                )
+
+                chart_key = (report.date, report.shift)
+                chart_counts[chart_key]["present"] += regular_present + contract_present
+                chart_counts[chart_key]["absent"] += regular_absent + contract_absent
+                chart_counts[chart_key]["overtime"] += overtime_total
+
+            dates = sorted({key[0] for key in chart_counts.keys()})
+            shift_codes = sorted({key[1] for key in chart_counts.keys()})
+            shift_styles = self._get_shift_styles(shift_codes)
+            attendance_series = {}
+            overtime_series = {}
+            for shift in shift_codes:
+                attendance_series[shift] = []
+                overtime_series[shift] = []
+                for date_key in dates:
+                    data = chart_counts.get((date_key, shift), {})
+                    present = data.get("present", 0)
+                    absent = data.get("absent", 0)
+                    total = present + absent
+                    rate = (present / total * 100) if total else 0
+                    attendance_series[shift].append(rate)
+                    overtime_series[shift].append(data.get("overtime", 0))
+
+            self.query_attendance_chart_data = {
+                "dates": dates,
+                "series": attendance_series,
+                "styles": shift_styles,
+            }
+            self.query_overtime_chart_data = {
+                "dates": dates,
+                "series": overtime_series,
+                "styles": shift_styles,
+            }
+            self._render_query_attendance_chart(self.query_attendance_chart_data)
+            self._render_query_overtime_chart(self.query_overtime_chart_data)
+        except Exception as exc:
+            messagebox.showerror(
+                self._t("common.error", "錯誤"),
+                self._t("summaryDashboard.loadFailed", "查詢失敗：{error}").format(
+                    error=exc
+                ),
+            )
+
+    def _run_equipment_query(self):
+        if not hasattr(self, "query_equipment_filters"):
+            return
+        start_date, end_date, shift_code, area_value = self._resolve_query_filters(
+            self.query_equipment_filters["start_var"],
+            self.query_equipment_filters["end_var"],
+            self.query_equipment_filters["shift_var"],
+            self.query_equipment_filters["area_var"],
+        )
+        if not start_date:
+            return
+        self._clear_tree(self.query_equipment_tree)
+        try:
+            with SessionLocal() as db:
+                query = (
+                    db.query(EquipmentLog)
+                    .join(DailyReport)
+                    .options(joinedload(EquipmentLog.report))
+                    .filter(
+                        DailyReport.date >= start_date,
+                        DailyReport.date <= end_date,
+                        DailyReport.is_hidden == 0,
+                    )
+                )
+                if shift_code:
+                    query = query.filter(DailyReport.shift == shift_code)
+                if area_value:
+                    query = query.filter(DailyReport.area == area_value)
+                rows = query.order_by(
+                    DailyReport.date, DailyReport.shift, DailyReport.area, EquipmentLog.id
+                ).all()
+
+            if not rows:
+                self.query_equipment_chart_data = None
+                self._render_query_issue_chart(
+                    None, self.query_equipment_chart_frame, "equipment"
+                )
+                messagebox.showinfo(
+                    self._t("common.info", "資訊"),
+                    self._t("common.emptyData", "查無資料"),
+                )
+                return
+
+            chart_counts = defaultdict(lambda: 0)
+            for row in rows:
+                report = row.report
+                if not report:
+                    continue
+                self.query_equipment_tree.insert(
+                    "",
+                    "end",
+                    values=(
+                        report.date.strftime("%Y-%m-%d"),
+                        self._format_shift_display(report.shift),
+                        report.area,
+                        row.equip_id,
+                        row.description,
+                        row.start_time,
+                        row.impact_qty,
+                        row.impact_hours,
+                        row.action_taken,
+                    ),
+                )
+                chart_counts[(report.date, report.shift)] += 1
+
+            dates = sorted({key[0] for key in chart_counts.keys()})
+            shift_codes = sorted({key[1] for key in chart_counts.keys()})
+            styles = self._get_shift_styles(shift_codes)
+            series = {}
+            for shift in shift_codes:
+                series[shift] = []
+                for date_key in dates:
+                    series[shift].append(chart_counts.get((date_key, shift), 0))
+
+            self.query_equipment_chart_data = {
+                "dates": dates,
+                "series": series,
+                "styles": styles,
+            }
+            self._render_query_issue_chart(
+                self.query_equipment_chart_data,
+                self.query_equipment_chart_frame,
+                "equipment",
+            )
+        except Exception as exc:
+            messagebox.showerror(
+                self._t("common.error", "錯誤"),
+                self._t("summaryDashboard.loadFailed", "查詢失敗：{error}").format(
+                    error=exc
+                ),
+            )
+
+    def _run_lot_query(self):
+        if not hasattr(self, "query_lot_filters"):
+            return
+        start_date, end_date, shift_code, area_value = self._resolve_query_filters(
+            self.query_lot_filters["start_var"],
+            self.query_lot_filters["end_var"],
+            self.query_lot_filters["shift_var"],
+            self.query_lot_filters["area_var"],
+        )
+        if not start_date:
+            return
+        self._clear_tree(self.query_lot_tree)
+        try:
+            with SessionLocal() as db:
+                query = (
+                    db.query(LotLog)
+                    .join(DailyReport)
+                    .options(joinedload(LotLog.report))
+                    .filter(
+                        DailyReport.date >= start_date,
+                        DailyReport.date <= end_date,
+                        DailyReport.is_hidden == 0,
+                    )
+                )
+                if shift_code:
+                    query = query.filter(DailyReport.shift == shift_code)
+                if area_value:
+                    query = query.filter(DailyReport.area == area_value)
+                rows = query.order_by(
+                    DailyReport.date, DailyReport.shift, DailyReport.area, LotLog.id
+                ).all()
+
+            if not rows:
+                self.query_lot_chart_data = None
+                self._render_query_issue_chart(
+                    None, self.query_lot_chart_frame, "lot"
+                )
+                messagebox.showinfo(
+                    self._t("common.info", "資訊"),
+                    self._t("common.emptyData", "查無資料"),
+                )
+                return
+
+            chart_counts = defaultdict(lambda: 0)
+            for row in rows:
+                report = row.report
+                if not report:
+                    continue
+                self.query_lot_tree.insert(
+                    "",
+                    "end",
+                    values=(
+                        report.date.strftime("%Y-%m-%d"),
+                        self._format_shift_display(report.shift),
+                        report.area,
+                        row.lot_id,
+                        row.description,
+                        row.status,
+                        row.notes,
+                    ),
+                )
+                chart_counts[(report.date, report.shift)] += 1
+
+            dates = sorted({key[0] for key in chart_counts.keys()})
+            shift_codes = sorted({key[1] for key in chart_counts.keys()})
+            styles = self._get_shift_styles(shift_codes)
+            series = {}
+            for shift in shift_codes:
+                series[shift] = []
+                for date_key in dates:
+                    series[shift].append(chart_counts.get((date_key, shift), 0))
+
+            self.query_lot_chart_data = {
+                "dates": dates,
+                "series": series,
+                "styles": styles,
+            }
+            self._render_query_issue_chart(
+                self.query_lot_chart_data, self.query_lot_chart_frame, "lot"
+            )
+        except Exception as exc:
+            messagebox.showerror(
+                self._t("common.error", "錯誤"),
+                self._t("summaryDashboard.loadFailed", "查詢失敗：{error}").format(
+                    error=exc
+                ),
+            )
+
+    def _render_query_attendance_chart(self, data):
+        frame = getattr(self, "query_attendance_chart_frame", None)
+        if not frame or not frame.winfo_exists():
+            return
+        for child in frame.winfo_children():
+            child.destroy()
+        if not data:
+            ttk.Label(frame, text=self._t("common.emptyData", "查無資料")).pack(
+                expand=True
+            )
+            return
+
+        dates = data["dates"]
+        series = data["series"]
+        styles = data["styles"]
+        labels = [d.strftime("%Y-%m-%d") for d in dates]
+        self._ensure_cjk_font()
+        theme = self._get_chart_theme()
+        frame.update_idletasks()
+        width = frame.winfo_width() or int(self.parent.winfo_screenwidth() * 0.7)
+        height = frame.winfo_height() or 320
+        dpi = 100
+        fig = Figure(figsize=(max(5.2, width / dpi), height / dpi), dpi=dpi)
+        fig.patch.set_facecolor(theme["face"])
+        ax = fig.add_subplot(111)
+        self._apply_chart_axes_theme(ax, theme)
+
+        title = self._t("summaryDashboard.rateLineTitle", "出勤率趨勢")
+        ax.set_title(title, fontsize=max(10, int(round(10 * self._ui_scale))))
+
+        x = list(range(len(labels)))
+        for shift_code, values in series.items():
+            style = styles.get(shift_code, {})
+            display = self.shift_display_map.get(shift_code, shift_code)
+            ax.plot(
+                x,
+                values,
+                marker=style.get("marker", "o"),
+                color=style.get("color", theme["line"]),
+                label=display,
+            )
+        ax.set_xticks(x)
+        ax.set_xticklabels(labels, rotation=45, ha="right")
+        ax.set_ylabel(self._t("summaryDashboard.rateAxis", "出勤率 (%)"))
+        ax.set_ylim(0, 100)
+        ax.tick_params(axis="y")
+        legend = ax.legend(loc="upper right")
+        legend.get_frame().set_facecolor(theme["face"])
+        legend.get_frame().set_edgecolor(theme["grid"])
+        for text in legend.get_texts():
+            text.set_color(theme["text"])
+        fig.tight_layout(rect=(0, 0.18, 1, 1))
+        canvas = FigureCanvasTkAgg(fig, master=frame)
+        canvas.draw()
+        canvas.get_tk_widget().configure(background=theme["face"])
+        canvas.get_tk_widget().pack(fill="both", expand=True)
+        self.query_attendance_chart_canvas = canvas
+
+    def _render_query_overtime_chart(self, data):
+        frame = getattr(self, "query_overtime_chart_frame", None)
+        if not frame or not frame.winfo_exists():
+            return
+        for child in frame.winfo_children():
+            child.destroy()
+        if not data:
+            ttk.Label(frame, text=self._t("common.emptyData", "查無資料")).pack(
+                expand=True
+            )
+            return
+
+        dates = data["dates"]
+        series = data["series"]
+        styles = data["styles"]
+        labels = [d.strftime("%Y-%m-%d") for d in dates]
+        self._ensure_cjk_font()
+        theme = self._get_chart_theme()
+        frame.update_idletasks()
+        width = frame.winfo_width() or int(self.parent.winfo_screenwidth() * 0.7)
+        height = frame.winfo_height() or 320
+        dpi = 100
+        fig = Figure(figsize=(max(5.2, width / dpi), height / dpi), dpi=dpi)
+        fig.patch.set_facecolor(theme["face"])
+        ax = fig.add_subplot(111)
+        self._apply_chart_axes_theme(ax, theme)
+        ax.set_title(self._t("queryHub.overtimeChartTitle", "加班人數趨勢"))
+        x = list(range(len(labels)))
+        shift_codes = list(series.keys())
+        bar_width = 0.8 / max(1, len(shift_codes))
+        for idx, shift_code in enumerate(shift_codes):
+            values = series[shift_code]
+            style = styles.get(shift_code, {})
+            display = self.shift_display_map.get(shift_code, shift_code)
+            offset = [val + (idx - (len(shift_codes) - 1) / 2) * bar_width for val in x]
+            ax.bar(
+                offset,
+                values,
+                width=bar_width,
+                color=style.get("color", theme["bar_primary"]),
+                label=display,
+            )
+            ax.plot(
+                offset,
+                values,
+                linestyle="",
+                marker=style.get("marker", "o"),
+                color=style.get("color", theme["bar_primary"]),
+            )
+        ax.set_xticks(x)
+        ax.set_xticklabels(labels, rotation=45, ha="right")
+        ax.set_ylabel(self._t("queryHub.overtimeCount", "加班人數"))
+        legend = ax.legend(loc="upper right")
+        legend.get_frame().set_facecolor(theme["face"])
+        legend.get_frame().set_edgecolor(theme["grid"])
+        for text in legend.get_texts():
+            text.set_color(theme["text"])
+        fig.tight_layout(rect=(0, 0.18, 1, 1))
+        canvas = FigureCanvasTkAgg(fig, master=frame)
+        canvas.draw()
+        canvas.get_tk_widget().configure(background=theme["face"])
+        canvas.get_tk_widget().pack(fill="both", expand=True)
+        self.query_overtime_chart_canvas = canvas
+
+    def _render_query_issue_chart(self, data, frame, chart_type):
+        if not frame or not frame.winfo_exists():
+            return
+        for child in frame.winfo_children():
+            child.destroy()
+        if not data:
+            ttk.Label(frame, text=self._t("common.emptyData", "查無資料")).pack(
+                expand=True
+            )
+            return
+
+        dates = data["dates"]
+        series = data["series"]
+        styles = data["styles"]
+        labels = [d.strftime("%Y-%m-%d") for d in dates]
+        self._ensure_cjk_font()
+        theme = self._get_chart_theme()
+        frame.update_idletasks()
+        width = frame.winfo_width() or int(self.parent.winfo_screenwidth() * 0.7)
+        height = frame.winfo_height() or 320
+        dpi = 100
+        fig = Figure(figsize=(max(5.2, width / dpi), height / dpi), dpi=dpi)
+        fig.patch.set_facecolor(theme["face"])
+        ax = fig.add_subplot(111)
+        self._apply_chart_axes_theme(ax, theme)
+        title_key = (
+            "queryHub.equipmentChartTitle"
+            if chart_type == "equipment"
+            else "queryHub.lotChartTitle"
+        )
+        title_default = "機台異常趨勢" if chart_type == "equipment" else "異常 Lot 趨勢"
+        ax.set_title(self._t(title_key, title_default))
+        x = list(range(len(labels)))
+        shift_codes = list(series.keys())
+        bar_width = 0.8 / max(1, len(shift_codes))
+        for idx, shift_code in enumerate(shift_codes):
+            values = series[shift_code]
+            style = styles.get(shift_code, {})
+            display = self.shift_display_map.get(shift_code, shift_code)
+            offset = [val + (idx - (len(shift_codes) - 1) / 2) * bar_width for val in x]
+            ax.bar(
+                offset,
+                values,
+                width=bar_width,
+                color=style.get("color", theme["bar_primary"]),
+                label=display,
+            )
+            ax.plot(
+                offset,
+                values,
+                linestyle="",
+                marker=style.get("marker", "o"),
+                color=style.get("color", theme["bar_primary"]),
+            )
+        ax.set_xticks(x)
+        ax.set_xticklabels(labels, rotation=45, ha="right")
+        ax.set_ylabel(self._t("queryHub.issueCountAxis", "筆數"))
+        legend = ax.legend(loc="upper right")
+        legend.get_frame().set_facecolor(theme["face"])
+        legend.get_frame().set_edgecolor(theme["grid"])
+        for text in legend.get_texts():
+            text.set_color(theme["text"])
+        fig.tight_layout(rect=(0, 0.18, 1, 1))
+        canvas = FigureCanvasTkAgg(fig, master=frame)
+        canvas.draw()
+        canvas.get_tk_widget().configure(background=theme["face"])
+        canvas.get_tk_widget().pack(fill="both", expand=True)
+
+    def _refresh_query_charts(self):
+        if getattr(self, "query_attendance_chart_data", None):
+            self._render_query_attendance_chart(self.query_attendance_chart_data)
+        if getattr(self, "query_overtime_chart_data", None):
+            self._render_query_overtime_chart(self.query_overtime_chart_data)
+        if getattr(self, "query_equipment_chart_data", None):
+            self._render_query_issue_chart(
+                self.query_equipment_chart_data,
+                self.query_equipment_chart_frame,
+                "equipment",
+            )
+        if getattr(self, "query_lot_chart_data", None):
+            self._render_query_issue_chart(
+                self.query_lot_chart_data, self.query_lot_chart_frame, "lot"
+            )
 
     def _build_attendance_notes(self, regular_reason, contract_reason):
         regular_label = self._t("attendance.regular_short", "Regular")
@@ -4692,6 +5862,7 @@ class ModernMainFrame:
         if not self._can_close_app(confirm=True):
             return
         self._closing = True
+        self._backup_database_on_exit()
         self.parent.destroy()
 
     def _request_restart(self, skip_checks=False):
@@ -4707,7 +5878,53 @@ class ModernMainFrame:
             ),
         )
         self._closing = True
+        self._backup_database_on_exit()
         self.parent.destroy()
+
+    def _backup_database_on_exit(self):
+        db_path = get_database_path()
+        if not db_path or not os.path.isfile(db_path):
+            return False
+        src = Path(db_path)
+        date_tag = datetime.now().strftime("%Y%m%d")
+        suffix = src.suffix or ".db"
+        backup_dir = src.parent / "Backup"
+        try:
+            backup_dir.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            print(f"❌ 無法建立備份資料夾: {exc}")
+            return False
+        backup_path = backup_dir / f"{src.stem}_{date_tag}{suffix}"
+        try:
+            shutil.copy2(src, backup_path)
+        except Exception as exc:
+            print(f"❌ 資料庫備份失敗: {exc}")
+            return False
+        if not self._verify_backup_file(backup_path):
+            print(f"⚠️ 資料庫備份驗證失敗: {backup_path}")
+            return False
+        return True
+
+    def _verify_backup_file(self, backup_path):
+        try:
+            path = Path(backup_path)
+            if not path.exists():
+                return False
+            if path.stat().st_size <= 0:
+                return False
+        except OSError:
+            return False
+        try:
+            import sqlite3
+
+            conn = sqlite3.connect(str(path))
+            try:
+                conn.execute("SELECT 1").fetchone()
+            finally:
+                conn.close()
+        except Exception:
+            return False
+        return True
 
     def toggle_auth(self):
         """切換登入/登出"""
@@ -4792,6 +6009,7 @@ class ModernMainFrame:
             self.admin_master_data.update_ui_language()
         self._update_abnormal_filter_options()
         self._update_summary_query_filter_options()
+        self._update_query_filter_options()
         self._update_shift_values()
         self._sync_report_context_from_form()
         if hasattr(self, "_configure_delay_tree"):
@@ -4806,8 +6024,18 @@ class ModernMainFrame:
             self._configure_summary_tree()
         if hasattr(self, "_configure_summary_query_tree"):
             self._configure_summary_query_tree()
+        if hasattr(self, "_configure_query_attendance_tree"):
+            self._configure_query_attendance_tree()
+        if hasattr(self, "_configure_query_overtime_tree"):
+            self._configure_query_overtime_tree()
+        if hasattr(self, "_configure_query_equipment_tree"):
+            self._configure_query_equipment_tree()
+        if hasattr(self, "_configure_query_lot_tree"):
+            self._configure_query_lot_tree()
         if self.current_page == "summary" and self.summary_dashboard_data:
             self._render_summary_charts(self.summary_dashboard_data)
+        if self.current_page == "query_hub":
+            self._refresh_query_charts()
         self._update_report_context_label()
         self._update_status_bar_info()
         self.status_label.config(
